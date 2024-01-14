@@ -2,8 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:image_to_text/DATA/DataClass/Product.dart';
 import 'package:image_to_text/MiniFunction/FormatDouble.dart';
+import 'package:image_to_text/UI/EditProduct/EditProductPage.dart';
 import 'package:image_to_text/UI/ProductDetails/ProductImagesCaroussel.dart';
 
+import '../AddProduct/AddProductPage.dart';
 import '../SaleProduct/SaleProductPage.dart';
 
 class ProductDetailsPage extends StatefulWidget {
@@ -82,6 +84,17 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   }
 
 
+  void _onEditProductTap() async {
+    bool? result = await Navigator.of(context).push(MaterialPageRoute(builder: (context) => AddProductPage(product: product),));
+    if (result != null && result) {
+      setState(() {
+        isLoading = true;
+        anErrorOccur = false;
+      });
+      loadProduct();
+    }
+  }
+
   @override
   void initState() {
     // TODO: implement initState
@@ -95,9 +108,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         alignment: Alignment.center,
         child: const CircularProgressIndicator()): anErrorOccur? _errorWidget(): Scaffold(
       appBar: AppBar(
-        title: Text(product.name!),
+        title: Text(product.name!, style: const TextStyle(fontSize: 15),),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
+        actions: [IconButton.filledTonal(onPressed: _onEditProductTap, icon: const Icon(Icons.edit),
+            style: ButtonStyle(backgroundColor: MaterialStatePropertyAll(Theme.of(context).colorScheme.inversePrimary.withOpacity(0.2))))],
       ),
       bottomNavigationBar: Container(
         color: Colors.white,

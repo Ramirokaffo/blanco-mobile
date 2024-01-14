@@ -38,11 +38,12 @@ class _OneInventoryWidgetState extends State<OneInventoryWidget> {
         invalidProductCount: invalidProductCount, staff: MyUser.currentUser, product: widget.listInventory[widget.index].product);
     await inventory.save().then((value) {
       if (value != null) {
-        showUniversalSnackBar(context: context, message: "Enregistrement effectué avec succès !");
+        widget.listInventory.removeAt(widget.index);
+        refreshInventoryPageStateState(context);
+        showUniversalSnackBar(context: context, message: "Enregistrement effectué avec succès !", backgroundColor: Colors.green);
       }
     }).onError((error, stackTrace) {
-      print(error);
-      showUniversalSnackBar(context: context, message: "Une erreur s'est produite !");
+      showUniversalSnackBar(context: context, message: "Une erreur s'est produite !", backgroundColor: Colors.red);
     });
     setState(() {
       _isSending = false;

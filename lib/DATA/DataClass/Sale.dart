@@ -63,7 +63,7 @@ class Sale {
   Future createBasket({void Function(double progess)? progressCallBack, String? serverUri}) async {
     CancelToken cancelToken = CancelToken();
     var dio = dioConstructor(serverUri?? await LocalBdManager.localBdSelectSetting("serverUri"));
-    print(toSendMapDto());
+    // print(toSendMapDto());
     var response = await dio.post(
       "/sale?current_sale=${addToCurrentSale!? 1: 0}",
       data: toSendMapDto(),
@@ -72,15 +72,15 @@ class Sale {
         if (progressCallBack != null) {
           progressCallBack(count / total);
         }
-        print("Count: $count");
-        print("Total: $total");
+        // print("Count: $count");
+        // print("Total: $total");
       },
     );
-    if (response.statusCode != 201) {
-      print(response.statusMessage);
-      print(response.extra);
-      print(response.headers);
-      print(response.data);
+    if (response.statusCode != 200) {
+      // print(response.statusMessage);
+      // print(response.extra);
+      // print(response.headers);
+      // print(response.data);
       throw Exception();
     }
 

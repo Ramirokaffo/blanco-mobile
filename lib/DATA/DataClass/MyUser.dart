@@ -188,11 +188,7 @@ class MyUser {
     try {
       CancelToken cancelToken = CancelToken();
     var dio = dioConstructor(serverUri?? await LocalBdManager.localBdSelectSetting("serverUri"), needAuthorisation: false);
-    print(toSendMapDto());
     var response = await dio.post(route?? "/create_user", data: toSendMapDto(), cancelToken: cancelToken);
-    print(response.data);
-    print(response.extra);
-    print(response.statusMessage);
     if ([201, 200].contains(response.statusCode)) {
         MyUser myUser = MyUser.fromMap(response.data["user"]);
         LocalBdManager.localBdChangeSetting("user", myUser.encodeToLocalSave());

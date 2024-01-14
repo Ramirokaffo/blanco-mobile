@@ -10,7 +10,8 @@ import '../SaleProduct/SaleProductPage.dart';
 class ListProductPage extends StatefulWidget {
   final Function(Product product)? onSaleTap;
   final String? actionText;
-  const ListProductPage({Key? key, this.onSaleTap, this.actionText}) : super(key: key);
+  final bool? autofocus;
+  const ListProductPage({Key? key, this.onSaleTap, this.actionText, this.autofocus}) : super(key: key);
 
   @override
   State<ListProductPage> createState() => _ListProductPageState();
@@ -38,7 +39,7 @@ class _ListProductPageState extends State<ListProductPage> {
     }).onError((error, stackTrace) {
       _anErrorOccur = true;
       setState(() {_isLoading = false;});
-      showUniversalSnackBar(context: context, message: "Une erreur s'est produite !");
+      showUniversalSnackBar(context: context, message: "Une erreur s'est produite !", backgroundColor: Colors.red);
     });
   }
 
@@ -63,7 +64,7 @@ class _ListProductPageState extends State<ListProductPage> {
       _anErrorOccur = true;
       _isLoading = false;
       setState(() {});
-    showUniversalSnackBar(context: context, message: "Une erreur s'est produite !");
+    showUniversalSnackBar(context: context, message: "Une erreur s'est produite !", backgroundColor: Colors.red);
     });
   }
 
@@ -146,6 +147,7 @@ class _ListProductPageState extends State<ListProductPage> {
               _currentPage = 0;
               fetchData(value);
             },
+            autofocus: widget.autofocus?? true,
             decoration: InputDecoration(
               hintText: "Rechercher",
               prefixIcon: const Icon(Icons.search),
@@ -175,13 +177,13 @@ class _ListProductPageState extends State<ListProductPage> {
                   showUniversalSnackBar(context: context, message: 'Aucun produit trouvé');
                 }
               }).onError((error, stackTrace) {
-                showUniversalSnackBar(context: context, message: 'Une erreur s\'est produite !');
+                showUniversalSnackBar(context: context, message: 'Une erreur s\'est produite !', backgroundColor: Colors.red);
               });
             });
           }, icon: const Icon(Icons.document_scanner))
         ],
       ),
-      body: _anErrorOccur? _errorWidget(): _isLoading? const Center(child: CircularProgressIndicator(),): _notMatchedData? _notMatchedDataWidget(): Container(
+      body: _anErrorOccur? _errorWidget(): _isLoading? const Center(child: CircularProgressIndicator(),): _notMatchedData && _currentPage == 0? _notMatchedDataWidget(): Container(
         padding: const EdgeInsets.only(top: 20),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.primary.withOpacity(0.1)

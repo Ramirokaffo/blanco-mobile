@@ -3,14 +3,15 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_to_text/DATA/DataClass/Product.dart';
-import 'package:image_to_text/UI/AddProduct/Actions/OnChangeImageTap.dart';
-import 'package:image_to_text/UI/AddProduct/Actions/OnDeleteImageTap.dart';
 
 import '../../../DisplayImage/DisplayImage.dart';
 
 
 
-Widget oneImageBox(BuildContext context, Product article, int imageIndex) {
+Widget oneImageBox(BuildContext context, Product article, int imageIndex,
+    void Function(BuildContext context, Product article, int imageIndex) onChangeImageTap,
+    void Function(BuildContext context, Product article, int imageIndex) onDeleteImageTap,
+{bool isLocalImage = true}) {
   return Material(
     borderRadius: BorderRadius.circular(5),
     elevation: 1,
@@ -30,7 +31,7 @@ Widget oneImageBox(BuildContext context, Product article, int imageIndex) {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => DisplaysImage(image: article.images![imageIndex].imageFile!.path, title: "Image", islocal: true,),
+                      builder: (context) => DisplaysImage(image: isLocalImage? article.images![imageIndex].imageFile!.path: article.images![imageIndex].url!, title: "Image", islocal: isLocalImage,),
                     ),
                   );
                 },
@@ -44,13 +45,22 @@ Widget oneImageBox(BuildContext context, Product article, int imageIndex) {
                           borderRadius: BorderRadius.circular(5),
                           color: Colors.white,
                         ),
-                        child: Image.file(File(article.images![imageIndex].imageFile!.path), fit: BoxFit.contain,),
+                        child: isLocalImage? Image.file(File(article.images![imageIndex].imageFile!.path), fit: BoxFit.contain,):
+                        Image.network(article.images![imageIndex].url!,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Center(
+                              child: CircularProgressIndicator(
+                                value: loadingProgress.expectedTotalBytes != null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                    : null,
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
-                    // Expanded(
-                    //   flex: 2,
-                    //   child: imageActionsWidget(context, article, imageIndex),
-                    // )
                   ],
                 )
             ),
@@ -65,11 +75,15 @@ Widget oneImageBox(BuildContext context, Product article, int imageIndex) {
           ),
           Align(
             alignment: Alignment.bottomRight,
-            child: InkWell(
-              onTap: (){
-                onChangeImageTap(context, article, imageIndex);
-              },
-                child: const Icon(Icons.edit, color: Colors.green,)),
+            child: Visibility(
+              visible: isLocalImage,
+              child:
+              InkWell(
+                onTap: (){
+                  onChangeImageTap(context, article, imageIndex);
+                },
+                  child: const Icon(Icons.edit, color: Colors.green,)),
+            ),
           ),
         ],
       ),

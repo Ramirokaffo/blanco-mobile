@@ -2,8 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:image_to_text/DATA/DataClass/Sale.dart';
 
-import '../../StateManager/SaleProductPageState.dart';
-import '../ProductDetails/ProductDetailsPage.dart';
+import '../../../StateManager/SaleProductPageState.dart';
+import '../../ProductDetails/ProductDetailsPage.dart';
 
 class OneProductWidget extends StatefulWidget {
   final Sale sale;

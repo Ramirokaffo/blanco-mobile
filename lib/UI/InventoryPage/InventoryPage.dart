@@ -10,6 +10,7 @@ import '../../DATA/DataClass/Product.dart';
 import '../../StateManager/InventoryPageState.dart';
 import '../ListProduct/ListProductPage.dart';
 import '../MiniWidget/UniversalSnackBar.dart';
+import '../MiniWidget/showSimpleDialog.dart';
 import 'OneInventoryWidget.dart';
 
 class InventoryPage extends StatefulWidget {
@@ -33,11 +34,10 @@ class _InventoryPageState extends State<InventoryPage> {
           listInventory.add(Inventory(product: product, staff: MyUser.currentUser));
         });
       } else {
-        showUniversalSnackBar(context: context, message: "Une erreur s'est produite");
+        showUniversalSnackBar(context: context, message: "Une erreur s'est produite", backgroundColor: Colors.red);
       }
     }).onError((error, stackTrace) {
-      print(error);
-      showUniversalSnackBar(context: context, message: "Une erreur s'est produite ici $error");
+      showUniversalSnackBar(context: context, message: "Une erreur s'est produite !", backgroundColor: Colors.red);
     });
   }
 
@@ -50,76 +50,83 @@ class _InventoryPageState extends State<InventoryPage> {
               listInventory.add(Inventory(product: product, staff: MyUser.currentUser));
             });
           } else {
-            showUniversalSnackBar(context: context, message: "Aucun produit trouvé pour ce code");
+            showUniversalSnackBar(context: context, message: "Aucun produit trouvé pour ce code", backgroundColor: Colors.deepOrange);
           }
         }).onError((error, stackTrace) {
-          showUniversalSnackBar(context: context, message: "Une erreur s'est produite");
+          showUniversalSnackBar(context: context, message: "Une erreur s'est produite", backgroundColor: Colors.red);
         });
       }
     });
   }
 
+  Future<bool> _onTryToPop() async {
+    return await showSimpleDialog(title: 'Confirmation', context: context, message: "Voulez-vous vraiment quitter ? Vos modifications seront perdues.",
+        isimgvisible: true, actionText: "Quitter", onActionTap: (){
+          Navigator.of(context).pop(true);
+        });
+  }
+
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      drawer: widget.myDrawer,
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-        centerTitle: true,
-        title: const Text("Inventaire"),
-        actions: [IconButton(onPressed: (){
-          Navigator.of(context).push(MaterialPageRoute(builder: (context) => ListProductPage(onSaleTap: onSearchProductTap, actionText: "Ajouter",),));
-        }, icon: const Icon(Icons.search),
-          style: ButtonStyle(backgroundColor: MaterialStatePropertyAll(
-              Theme.of(context).colorScheme.inversePrimary.withOpacity(0.2))),)],
+    return WillPopScope(
+      onWillPop: () async {
+        if (listInventory.isNotEmpty) {
+          return _onTryToPop();
+        } else {
+          return true;
+        }
+      },
+      child: Scaffold(
+        drawer: widget.myDrawer,
+        appBar: AppBar(
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          foregroundColor: Colors.white,
+          centerTitle: true,
+          title: const Text("Inventaire"),
+          actions: [IconButton(onPressed: (){
+            Navigator.of(context).push(MaterialPageRoute(builder: (context) => ListProductPage(onSaleTap: onSearchProductTap, actionText: "Ajouter",),));
+          }, icon: const Icon(Icons.search),
+            style: ButtonStyle(backgroundColor: MaterialStatePropertyAll(
+                Theme.of(context).colorScheme.inversePrimary.withOpacity(0.2))),)],
+        ),
+        body: BlocBuilder<InventoryPageState, bool>(
+            builder: (BuildContext contxt, state) {
+              int index = 0;
+              return Container(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: CustomScrollView(
+              slivers: [
+                SliverList(delegate: SliverChildListDelegate(listInventory.map((e) => OneInventoryWidget(listInventory: listInventory, index: index++)).toList())),
+                SliverList(delegate: SliverChildListDelegate(
+                 <Widget>[
+                    const SizedBox(height: 30,),
+                    TextButton(
+                        style: ButtonStyle(
+                          backgroundColor: MaterialStatePropertyAll(Theme.of(context).colorScheme.primary),
+                          foregroundColor: const MaterialStatePropertyAll(Colors.white),
+                          // padding: MaterialStatePropertyAll(EdgeInsets.symmetric(horizontal: 10))
+                        ),
+                        onPressed: onAddProductTap, child: const Text("Scanner le code")),
+                    const SizedBox(height: 20,),
+                    TextButton(
+                        style: ButtonStyle(
+                          backgroundColor: const MaterialStatePropertyAll(Colors.white),
+                          // foregroundColor: const MaterialStatePropertyAll(Colors.white),
+                            shape: MaterialStatePropertyAll(RoundedRectangleBorder(
+                                side: BorderSide(color: Theme.of(context).colorScheme.primary), borderRadius: BorderRadius.circular(30)))
+                          // padding: MaterialStatePropertyAll(EdgeInsets.symmetric(horizontal: 10))
+                        ),
+                        onPressed: (){
+                          Navigator.of(context).push(MaterialPageRoute(builder: (context) => const AddProductPage(isInventoryMode: true),));
+                        }, child: const Text("Nouveau produit")),
+                  ]
+                ))
+              ],
+            ),
+        );})
       ),
-      body: BlocBuilder<InventoryPageState, bool>(
-          builder: (BuildContext contxt, state) {
-            int index = 0;
-            return Container(
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: CustomScrollView(
-            slivers: [
-              SliverList(delegate: SliverChildListDelegate(listInventory.map((e) => OneInventoryWidget(listInventory: listInventory, index: index++)).toList())),
-              SliverList(delegate: SliverChildListDelegate(
-               <Widget>[
-                  const SizedBox(height: 30,),
-                  TextButton(
-                      style: ButtonStyle(
-                        backgroundColor: MaterialStatePropertyAll(Theme.of(context).colorScheme.primary),
-                        foregroundColor: const MaterialStatePropertyAll(Colors.white),
-                        // padding: MaterialStatePropertyAll(EdgeInsets.symmetric(horizontal: 10))
-                      ),
-                      onPressed: onAddProductTap, child: const Text("Scanner le code")),
-                  const SizedBox(height: 20,),
-                  TextButton(
-                      style: ButtonStyle(
-                        backgroundColor: const MaterialStatePropertyAll(Colors.white),
-                        // foregroundColor: const MaterialStatePropertyAll(Colors.white),
-                          shape: MaterialStatePropertyAll(RoundedRectangleBorder(
-                              side: BorderSide(color: Theme.of(context).colorScheme.primary), borderRadius: BorderRadius.circular(30)))
-                        // padding: MaterialStatePropertyAll(EdgeInsets.symmetric(horizontal: 10))
-                      ),
-                      onPressed: (){
-                        Navigator.of(context).push(MaterialPageRoute(builder: (context) => const AddProductPage(isInventoryMode: true),));
-                      }, child: const Text("Nouveau produit")),
-                ]
-              ))
-              // ListView(
-              //   children: [
-              //     // for r in listInventory {
-              //     // OneInventoryWidget
-              //     // }
-              //     // listInventory.forEach((element) { }),
-              //
-              //   ],
-              // ),
-            ],
-          ),
-      );})
     );
   }
 }

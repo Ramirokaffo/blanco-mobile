@@ -4,6 +4,8 @@ import 'package:extended_image/extended_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../DATA/DataClass/MyUser.dart';
+
 class DisplaysImage extends StatefulWidget {
   final String image;
   final bool? islocal;
@@ -44,7 +46,6 @@ class _DisplaysImage extends State<DisplaysImage>
   @override
   void initState() {
     super.initState();
-    print(widget.image);
     controller = TransformationController();
     animationController = AnimationController(
       vsync: this,
@@ -164,7 +165,7 @@ class _DisplaysImage extends State<DisplaysImage>
     animationController.dispose();
   }
 
-  Widget imageFromNetwork() {
+  Widget _imageFromNetwork() {
     return Hero(
         tag: int.tryParse(widget.image
                 .split("image_picker")
@@ -180,6 +181,7 @@ class _DisplaysImage extends State<DisplaysImage>
                 .last,
         child: ExtendedImage.network(
           widget.image,
+          headers: {"userId": MyUser.currentUser.id.toString()},
           width: MediaQuery.of(context).size.width,
           height: MediaQuery.of(context).size.height,
           fit: BoxFit.contain,
@@ -208,7 +210,7 @@ class _DisplaysImage extends State<DisplaysImage>
         ));
   }
 
-  Widget imageFromLocalFile() {
+  Widget _imageFromLocalFile() {
     return Hero(
         tag: int.tryParse(widget.image
                 .split("image_picker")
@@ -276,8 +278,8 @@ class _DisplaysImage extends State<DisplaysImage>
                   Align(
                     alignment: Alignment.center,
                     child: widget.islocal == true
-                        ? imageFromLocalFile()
-                        : imageFromNetwork(),
+                        ? _imageFromLocalFile()
+                        : _imageFromNetwork(),
                   ),
                   Align(
                     alignment: Alignment.topCenter,
@@ -306,6 +308,7 @@ class _DisplaysImage extends State<DisplaysImage>
                                       padding:
                                           const EdgeInsets.only(bottom: 10),
                                       child: FittedBox(
+                                        fit: BoxFit.contain,
                                         child: Text(widget.title,
                                             style: const TextStyle(
                                                 color: Colors.white,
@@ -357,130 +360,4 @@ class _DisplaysImage extends State<DisplaysImage>
               ))),
     );
   }
-  // Widget build(BuildContext context) {
-  //   // final imageProvider = Image.network("https://picsum.photos/id/1001/5616/3744").image;
-  //
-  //
-  //   return MaterialApp(
-  //     debugShowCheckedModeBanner: false,
-  //     home: Scaffold(
-  //       backgroundColor: Colors.white,
-  //       appBar: !onlyImgIsVisible? null: AppBar(
-  //         title: Text(
-  //           widget.title,
-  //           style: const TextStyle(color: Colors.white),
-  //         ),
-  //         centerTitle: true,
-  //         backgroundColor: themeColor,
-  //         leading: IconButton(
-  //             onPressed: () {
-  //               Navigator.of(context).pop();
-  //             },
-  //             icon: const Icon(
-  //               Icons.arrow_back_ios,
-  //               color: Colors.white,
-  //             )),
-  //         actions: [
-  //           Visibility(
-  //             visible: !(widget.islocal?? false),
-  //             child: IconButton(
-  //                 onPressed: () async {
-  //                   // if (widget.islocal == false) {
-  //                   //       await imageDownloadViaLink(widget.image).then((value) {
-  //                   //         print("Non non: $value");
-  //                   //         showSimpleSnackbar(
-  //                   //             rootScaffoldMessengerKey: rootScaffoldMessengerKey,
-  //                   //             message: "L'image a été telechargée avec succès ",
-  //                   //             context: context);
-  //                   //       }).onError((error, stackTrace) {
-  //                   //         print("Il ya erreur: $error");
-  //                   //         showUniversalSnackBar(context: context, message: "Une erreur est suvenue lors du téléchargement de l'image");
-  //                   //         showSimpleSnackbar(
-  //                   //             rootScaffoldMessengerKey: rootScaffoldMessengerKey,
-  //                   //             message:
-  //                   //             "Une erreur est suvenue lors du téléchargement de l'image",
-  //                   //             context: context);
-  //                   //       });
-  //                   //
-  //                   // } else {}
-  //                 },
-  //                 icon: const Icon(
-  //                   Icons.download,
-  //                   color: Colors.white,
-  //                 )),
-  //           )
-  //         ],
-  //       ),
-  //       body: GestureDetector(
-  //       onTap: () {
-  //         setState(() {
-  //           onlyImgIsVisible = !onlyImgIsVisible;
-  //         });
-  //       },
-  //       onDoubleTap: handleDoubleTap,
-  //       onDoubleTapDown: ((details) {
-  //         print("double tap down");
-  //         handleDoubleTapDown(details);
-  //       }),
-  //       // onVerticalDragDown: (details) {
-  //       //   // handleDoubleTapDown(details);
-  //       //
-  //       // },
-  //       onPanUpdate: (details) {
-  //         setState(() {
-  //           offset = Offset(offset.dx + details.delta.dx,
-  //               offset.dy + details.delta.dy);
-  //         });
-  //         print(details);
-  //       },
-  //       child: InteractiveViewer(
-  //         // onInteractionEnd: ((details) {
-  //         //   // print("object");
-  //         //   resetAnimation();
-  //         // }),
-  //         clipBehavior: Clip.none,
-  //         transformationController: controller,
-  //         // maxScale: 4,
-  //         // minScale: 1,
-  //         // panEnabled: false,
-  //         child: widget.islocal == true
-  //             ? Image.file(
-  //           File(widget.image),
-  //                 width: double.infinity,
-  //                 height: double.infinity,
-  //           fit: BoxFit.contain,
-  //
-  //         )
-  //             : Hero(
-  //               tag: int.tryParse(widget.image.split("image_picker").toList()[0].split("/").toList().last)?? widget.image.split("image_picker").toList()[0].split("/").toList().last,
-  //               child: FadeInImage.assetNetwork(
-  //                 fit: BoxFit.contain,
-  //                 width: double.infinity,
-  //                 height: double.infinity,
-  //                   placeholder: imagePlaceholder, image: widget.image,
-  //                 imageErrorBuilder: (context, object, stackTrace) {
-  //                   return Container(
-  //                     width: MediaQuery.of(context).size.width,
-  //                     height: 200,
-  //                     color: Colors.white,
-  //                     child: Column(
-  //                       children: const [
-  //                         SizedBox(
-  //                           height: 100,
-  //                         ),
-  //                         Center(
-  //                             child: Text(
-  //                               "Erreur lors du chargement de l'image...",
-  //                               style: TextStyle(color: Colors.red),
-  //                             )),
-  //                       ],
-  //                     ),
-  //                   );
-  //                 },),
-  //             ),
-  //       ),
-  //       ),
-  //     ),
-  //   );
-  // }
 }

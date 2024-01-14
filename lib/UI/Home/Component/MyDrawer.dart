@@ -8,6 +8,7 @@ import 'package:image_to_text/UI/MiniWidget/showSimpleDialog.dart';
 import 'package:image_to_text/UI/WelcommePage.dart';
 
 import '../../../MiniFunction/GlobalTestConnectivity.dart';
+import '../../ListProduct/ProductWithAnyUnitCoastPage.dart';
 
 class MyDrawerMenu extends StatefulWidget {
   const MyDrawerMenu({Key? key}) : super(key: key);
@@ -60,7 +61,10 @@ class _MyDrawerMenuState extends State<MyDrawerMenu> {
             child: OneMenuItem(titleText: "Test de connectivité", leadingIcon: Icons.document_scanner_outlined, onTap: (){
               globalConnectivityTest(context);},),
           ),
-          OneMenuItem(titleText: "Déconnexion", leadingIcon: Icons.logout, onTap: onLogOutTap,)
+          OneMenuItem(titleText: "Produits sans prix d'achat", leadingIcon: Icons.logout, onTap: (){
+            Navigator.of(context).push(MaterialPageRoute(builder: (context) => const ProductWithAnyUnitCoastPage(),));
+          },),
+          OneMenuItem(titleText: "Déconnexion", leadingIcon: Icons.logout, onTap: onLogOutTap,),
         ],
       ),
     );

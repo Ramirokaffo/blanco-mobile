@@ -62,6 +62,7 @@ class Rayon {
 
 
   Rayon.fromMap(Map<String, dynamic>? rayon) {
+    // print("Le rayon du produit: ${rayon}");
     if (rayon != null) {
       id = rayon["id"];
       name = rayon["name"];

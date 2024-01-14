@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 
 
-void showSimpleDialog(
+Future showSimpleDialog(
     {required String title,
       required BuildContext context,
       required String message,
       String? actionText = "OK",
       bool isimgvisible = false,
       Function? onActionTap}) {
-  showDialog(
+  return showDialog(
     context: context,
     builder: (BuildContext contex) {
       return AlertDialog(

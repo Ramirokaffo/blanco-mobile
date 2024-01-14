@@ -25,6 +25,7 @@ class _ArticleImagesCarouselState extends State<ArticleImagesCarousel> {
   void initState() {
     // TODO: implement initState
     super.initState();
+    widget.images.removeWhere((element) => element.imageFile != null);
     _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
       setState(() {
         if (_currentPage == widget.images.length - 1) {
@@ -47,6 +48,8 @@ class _ArticleImagesCarouselState extends State<ArticleImagesCarousel> {
 
   @override
   Widget build(BuildContext context) {
+    widget.images.removeWhere((element) => element.imageFile != null);
+
     return Stack(
       children: [
         PageView.builder(

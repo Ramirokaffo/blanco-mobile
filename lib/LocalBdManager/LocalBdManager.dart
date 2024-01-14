@@ -48,14 +48,30 @@ class LocalBdManager {
 // return;
     Database database = await openDatabase(path, version: 1,
         onCreate: (Database db, int version) async {
-      await db.execute(
-          'CREATE TABLE setting (`id` INTEGER NOT NULL , `name` VARCHAR(45) NULL, `valeur` VARCHAR(500) NULL, PRIMARY KEY (`id`));');
+          await db.execute(
+              'CREATE TABLE product (`id` INTEGER NOT NULL , `name` VARCHAR(45) NULL, `valeur` VARCHAR(500) NULL, PRIMARY KEY (`id`));');
+          await db.execute(
+          'CREATE TABLE setting (`id` INTEGER NOT NULL , '
+              '`code` VARCHAR(45) NULL, '
+              '`name` VARCHAR(500) NULL, '
+              '`brand` VARCHAR(500) NULL, '
+              '`stock` INTEGER NULL, '
+              '`supplyId` INTEGER NULL, '
+              '`description` VARCHAR(5000) NULL, '
+              '`color` VARCHAR(50) NULL, '
+              '`grammage` FLOAT NULL, '
+              '`unitPrice` FLOAT NULL, '
+              '`unitCoast` FLOAT NULL, '
+              '`maxSalablePrice` FLOAT NULL, '
+              '`expAlertPeriod` FLOAT NULL, '
+              '`isPriceReducible` INTEGER NULL, '
+              'PRIMARY KEY (`id`));');
       await db.transaction((txn) async {
         await txn.rawInsert(
             'INSERT INTO setting (name, valeur) VALUES ("account", "0"), '
                 '("user", "none"), ("serverUri", "none"), ("login", "none"), ("password", "0") ');
         // await txn.rawInsert(
-        //     'INSERT INTO setting (name, valeur) VALUES("user", "none")');
+        //     'INSERT INTO product (id, valeur) VALUES("user", "none")');
         // await txn.rawInsert(
         //     'INSERT INTO setting (name, valeur) VALUES("token", "none")');
       });

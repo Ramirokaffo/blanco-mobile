@@ -6,13 +6,11 @@ import 'package:image_picker/image_picker.dart';
 
 import 'LocalBdManager/LocalBdManager.dart';
 import 'StateManager/AddArticlePageState.dart';
+import 'StateManager/EditArticlePageState.dart';
 import 'StateManager/InventoryPageState.dart';
 import 'StateManager/SaleProductPageState.dart';
 import 'StateManager/SendDataProgressBarState.dart';
 import 'UI/Home/HomePage.dart';
-import 'UI/Login/Component/AuthentificationPage.dart';
-import 'UI/Login/LoginPage.dart';
-import 'UI/WelcommePage.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,6 +26,7 @@ class MyApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(create: (context) => AddArticlePageState(true)),
+        BlocProvider(create: (context) => EditArticlePageState(true)),
         BlocProvider(create: (context) => SendDataProgressBarState(0)),
         BlocProvider(create: (context) => SaleProductPageState(true)),
         BlocProvider(create: (context) => InventoryPageState(true)),
@@ -40,8 +39,8 @@ class MyApp extends StatelessWidget {
           useMaterial3: true,
         ),
         // home: AuthentificationPage(title: 'toti',),
-        // home: const HomePage(),
-        home: const WelcomePage(),
+        home: const HomePage(),
+        // home: const WelcomePage(),
       ),
     );
   }
@@ -63,9 +62,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future _getImageFromGallery() async {
     final pickedFile = await picker.pickImage(source: ImageSource.camera, );
     if (pickedFile != null) {
-      // setState(() {
         _image = XFile(pickedFile.path);
-      // });
       _readTextFromImage();
 
     }
@@ -81,30 +78,9 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
 
     });
-    // print(recognizedText.blocks);
     recognizedText.blocks.forEach((element) {
-      print(element.text);
-      print("\n.\n.\n.\n.\n.\n.");
     });
-    // InputImage.fromFilePath(path)
     textRecognizer.close();
-    // showDialog(
-    //   context: context,
-    //   builder: (context) {
-    //     return AlertDialog(
-    //       title: Text('Extracted Text'),
-    //       content: Text(text),
-    //       actions: [
-    //         TextButton(
-    //           onPressed: () {
-    //             Navigator.pop(context);
-    //           },
-    //           child: Text('Close'),
-    //         ),
-    //       ],
-    //     );
-    //   },
-    // );
   }
 
   @override
@@ -118,9 +94,6 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            // Visibility(
-            //   visible: _image != null,
-            //     child: Image.file(File(_image!.path))),
            Visibility(
              visible: extractText.isNotEmpty,
                child: Text(extractText))
