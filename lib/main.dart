@@ -11,6 +11,7 @@ import 'StateManager/InventoryPageState.dart';
 import 'StateManager/SaleProductPageState.dart';
 import 'StateManager/SendDataProgressBarState.dart';
 import 'UI/Home/HomePage.dart';
+import 'UI/WelcommePage.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,8 +40,8 @@ class MyApp extends StatelessWidget {
           useMaterial3: true,
         ),
         // home: AuthentificationPage(title: 'toti',),
-        home: const HomePage(),
-        // home: const WelcomePage(),
+        // home: const HomePage(),
+        home: const WelcomePage(),
       ),
     );
   }

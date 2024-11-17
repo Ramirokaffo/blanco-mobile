@@ -223,6 +223,9 @@ class _AddProductPageState extends State<AddProductPage> {
     _product.brand = _brandController.text;
     _product.description = _descriptionController.text;
     _product.unitPrice = double.tryParse(_unitPriceController.text);
+    if (_unitCoastController.text.contains(",")) {
+      _unitCoastController.text = _unitCoastController.text.replaceAll(",", ".");
+    }
     _product.unitCoast = double.tryParse(_unitCoastController.text);
     _product.code = _codeController.text;
     _product.grammage = double.tryParse(_grammageController.text);

@@ -49,9 +49,9 @@ class LocalBdManager {
     Database database = await openDatabase(path, version: 1,
         onCreate: (Database db, int version) async {
           await db.execute(
-              'CREATE TABLE product (`id` INTEGER NOT NULL , `name` VARCHAR(45) NULL, `valeur` VARCHAR(500) NULL, PRIMARY KEY (`id`));');
+              'CREATE TABLE setting (`id` INTEGER NOT NULL , `name` VARCHAR(45) NULL, `valeur` VARCHAR(500) NULL, PRIMARY KEY (`id`));');
           await db.execute(
-          'CREATE TABLE setting (`id` INTEGER NOT NULL , '
+          'CREATE TABLE product (`id` INTEGER NOT NULL , '
               '`code` VARCHAR(45) NULL, '
               '`name` VARCHAR(500) NULL, '
               '`brand` VARCHAR(500) NULL, '
