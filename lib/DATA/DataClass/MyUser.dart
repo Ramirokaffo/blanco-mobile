@@ -1,8 +1,8 @@
-
-
 import 'package:dio/dio.dart';
 
 import '../../LocalBdManager/LocalBdManager.dart';
+import '../HttpRequest/ApiHelper.dart';
+import '../HttpRequest/RouteFile.dart';
 import '../HttpRequest/dioConstructor.dart';
 
 
@@ -20,6 +20,8 @@ class MyUser {
   late bool? isValid;
   late bool? isActive;
   static MyUser currentUser = MyUser(isValid: false);
+  // Token DRF renvoyé par /api/auth/login/ (en-tête "Authorization: Token ...")
+  static String? token;
 
   MyUser({
     this.id,
@@ -42,26 +44,26 @@ class MyUser {
     email = map["email"];
     login = map["username"];
     createAt = map["create_at"];
-    isActive = map["is_active"] == 1;
+    isActive = toBool(map["is_active"]);
     role = map["role"];
     phoneNumber = map["phone_number"];
     isValid = true;
   }
 
   Map<String, dynamic> toSendMapDto() {
-    return {
-      "id": id,
+    Map<String, dynamic> data = {
+      "username": login,
       "firstname": firstName,
       "lastname": lastName,
-      "username": login,
-      "password": password,
       "phone_number": phoneNumber,
-      "email": phoneNumber,
+      "password": password,
     };
+    data.removeWhere((key, value) => value == null);
+    return data;
   }
 
   String encodeToLocalSave() {
-    return [id, firstName, lastName, phoneNumber, email, role, createAt].join("!#&");
+    return [id, firstName, lastName, phoneNumber, email, role, createAt, login, (isActive?? false)? 1: 0].join("!#&");
   }
 
 
@@ -70,14 +72,21 @@ class MyUser {
     String encodingLocalUser = await LocalBdManager.localBdSelectSetting("user");
     if (encodingLocalUser != "none") {
       List<String> listEncodingLocalUser = encodingLocalUser.split("!#&");
+      String? field(int index) {
+        if (index >= listEncodingLocalUser.length) return null;
+        String value = listEncodingLocalUser[index];
+        return value.isEmpty || value == "null"? null: value;
+      }
       MyUser myUser = MyUser();
-      myUser.id = int.parse(listEncodingLocalUser[0]);
-      myUser.firstName = listEncodingLocalUser[1];
-      myUser.lastName = listEncodingLocalUser[2];
-      myUser.phoneNumber = listEncodingLocalUser[3];
-      myUser.email = listEncodingLocalUser[4];
-      myUser.role = listEncodingLocalUser[5];
-      myUser.createAt = listEncodingLocalUser[6];
+      myUser.id = int.tryParse(listEncodingLocalUser[0]);
+      myUser.firstName = field(1);
+      myUser.lastName = field(2);
+      myUser.phoneNumber = field(3);
+      myUser.email = field(4);
+      myUser.role = field(5);
+      myUser.createAt = field(6);
+      myUser.login = field(7);
+      myUser.isActive = field(8) != "0";
       myUser.isValid = true;
       return myUser;
     } else {
@@ -85,7 +94,26 @@ class MyUser {
     }
   }
 
+  static Future loadToken() async {
+    String savedToken = await LocalBdManager.localBdSelectSetting("token");
+    token = savedToken != "none"? savedToken: null;
+  }
 
+  static Future _saveSession(MyUser myUser, String? newToken) async {
+    await LocalBdManager.localBdChangeSetting("user", myUser.encodeToLocalSave());
+    await LocalBdManager.localBdChangeSetting("login", myUser.login?? "none");
+    currentUser = myUser;
+    currentUser.isValid = true;
+    if (newToken != null) {
+      token = newToken;
+      await LocalBdManager.localBdChangeSetting("token", newToken);
+    }
+  }
+
+  static Future logOut() async {
+    token = null;
+    await LocalBdManager.localBdChangeSetting("token", "none");
+  }
 
 
   static Future<MyUser?> getCurrentUser({CancelToken? cancelToken}) async {
@@ -94,6 +122,7 @@ class MyUser {
     }
       MyUser? myUser = await decodeFromLocalSave();
       if (myUser != null) {
+        await loadToken();
         currentUser = myUser;
         currentUser.isValid = true;
         return currentUser;
@@ -104,105 +133,80 @@ class MyUser {
 
   static Future<MyUser?> reloadUser({CancelToken? cancelToken}) async {
     MyUser? myUser = await decodeFromLocalSave();
-    if (myUser != null) {
-      var dio = dioConstructor(
-          await LocalBdManager.localBdSelectSetting("serverUri"));
-      dio.get("/get_user_by_id/${myUser.id}",
-              cancelToken: cancelToken)
-          .then((response) {
-        if (response.statusCode == 200) {
-          currentUser = MyUser.fromMap(response.data);
-          currentUser.isValid = true;
-          return currentUser;
-        }
-      });
+    if (myUser == null || myUser.id == null) return null;
+    var dio = dioConstructor(
+        await LocalBdManager.localBdSelectSetting("serverUri"));
+    var response = await dio.get(userByIdRoute(myUser.id!), cancelToken: cancelToken);
+    if (response.statusCode == 200) {
+      await _saveSession(MyUser.fromMap(response.data), null);
+      return currentUser;
     }
-    // }
-    return null;
+    throw ApiException(extractErrorMessage(response.data), statusCode: response.statusCode);
   }
 
   static Future testServerConnection({String? serverUri, CancelToken? cancelToken}) async {
     String newServerUri = serverUri?? await LocalBdManager.localBdSelectSetting("serverUri");
-    var dio = dioConstructor(newServerUri);
-    var response = await dio.get("/test_connexion", cancelToken: cancelToken);
-    if (response.statusCode == 200) {
+    var dio = dioConstructor(newServerUri, needAuthorisation: false);
+    var response = await dio.get(testConnectionRoute, cancelToken: cancelToken);
+    if (response.statusCode == 200 && response.data is Map) {
       if (response.data["status"] == 1) {
-        LocalBdManager.localBdChangeSetting("serverUri", newServerUri);
+        await LocalBdManager.localBdChangeSetting("serverUri", newServerUri);
       }
         return response.data;
     }
+    return {"status": 0};
   }
 
+  /// Connexion avec le login enregistré localement.
+  /// Renvoie {"status": 1, ...} en cas de succès, sinon {"status": 0, "message": ...}.
   static Future logUserIn(String password, {CancelToken? cancelToken, String? serverUri}) async {
-    var dio = dioConstructor(serverUri?? await LocalBdManager.localBdSelectSetting("serverUri"));
-    var response = await dio.get("/login/${await LocalBdManager.localBdSelectSetting("login")}/$password", cancelToken: cancelToken);
-    try {
-      if (response.statusCode == 200) {
-        if (response.data["status"] == 1) {
-          MyUser myUser = MyUser.fromMap(response.data["user"]);
-          LocalBdManager.localBdChangeSetting("user", myUser.encodeToLocalSave());
-          MyUser.currentUser = myUser;
-        }
-        return response.data;
-      }
-    } catch (e) {
-      throw Exception(e);
-    }
-
-  }
-
-  static Future findUserByLogin(String login, {CancelToken? cancelToken}) async {
-    var dio = dioConstructor(await LocalBdManager.localBdSelectSetting("serverUri"));
-    var response = await dio.get("/get_staff_by_login/$login", cancelToken: cancelToken);
-    try {
-      if (response.statusCode == 200) {
-        if (response.data["status"] == 1) {
-          MyUser myUser = MyUser.fromMap(response.data["user"]);
-          LocalBdManager.localBdChangeSetting("user", myUser.encodeToLocalSave());
-          MyUser.currentUser = myUser;
-          LocalBdManager.localBdChangeSetting("login", myUser.login?? "none");
-        }
-        return response.data;
-      }
-    } catch (e) {
-      throw Exception(e);
-    }
-    return null;
-
-  }
-
-  static Future makeGetRequest(String serverUri, String path, {CancelToken? cancelToken}) async {
-    var dio = dioConstructor(serverUri);
-    var response = await dio.get(path, cancelToken: cancelToken);
-    if (response.statusCode == 200) {
-      return response.data;
-    } else {
-      // return
-    }
-  }
-
-
-
-
-  Future<MyUser?> createOrUpdateUser({String? route, String? serverUri}) async {
-    try {
-      CancelToken cancelToken = CancelToken();
     var dio = dioConstructor(serverUri?? await LocalBdManager.localBdSelectSetting("serverUri"), needAuthorisation: false);
-    var response = await dio.post(route?? "/create_user", data: toSendMapDto(), cancelToken: cancelToken);
-    if ([201, 200].contains(response.statusCode)) {
-        MyUser myUser = MyUser.fromMap(response.data["user"]);
-        LocalBdManager.localBdChangeSetting("user", myUser.encodeToLocalSave());
-        LocalBdManager.localBdChangeSetting("login", myUser.login?? "none");
-        currentUser  = myUser;
-        currentUser.isValid = true;
-        return myUser;
-    } else {
-      throw Exception("Une erreur s'est produite");
+    var response = await dio.post(loginRoute, data: {
+      "username": await LocalBdManager.localBdSelectSetting("login"),
+      "password": password,
+    }, cancelToken: cancelToken);
+    if (response.statusCode == 200 && response.data["status"] == 1) {
+      await _saveSession(MyUser.fromMap(response.data["user"]), response.data["token"]);
+      return response.data;
     }
-    } catch (e) {
-      print(e);
-      throw Exception(e);
+    if (response.statusCode == 429) {
+      return {"status": 0, "message": extractErrorMessage(response.data, fallback: "Trop de tentatives, réessayez plus tard")};
     }
+    return {"status": 0, "message": extractErrorMessage(response.data, fallback: "Login ou mot de passe incorrect")};
+  }
+
+  /// Le serveur n'expose plus la recherche de compte sans authentification :
+  /// on mémorise le login, la vérification se fait à la connexion.
+  static Future setLocalLogin(String login) async {
+    await LocalBdManager.localBdChangeSetting("login", login.trim());
+    currentUser.login = login.trim();
+  }
+
+  /// Inscription depuis l'application : le compte est créé inactif côté
+  /// serveur et doit être activé par un administrateur.
+  Future<Map<String, dynamic>> createAccount({String? serverUri}) async {
+    var dio = dioConstructor(serverUri?? await LocalBdManager.localBdSelectSetting("serverUri"), needAuthorisation: false);
+    var response = await dio.post(createUserRoute, data: toSendMapDto());
+    if ([201, 200].contains(response.statusCode) && response.data["status"] == 1) {
+      MyUser myUser = MyUser.fromMap(response.data["user"]);
+      await LocalBdManager.localBdChangeSetting("user", myUser.encodeToLocalSave());
+      await LocalBdManager.localBdChangeSetting("login", myUser.login?? "none");
+      return response.data;
+    }
+    throw ApiException(extractErrorMessage(response.data), statusCode: response.statusCode);
+  }
+
+  Future<MyUser> updateUser({String? serverUri, String? currentPassword}) async {
+    var dio = dioConstructor(serverUri?? await LocalBdManager.localBdSelectSetting("serverUri"));
+    Map<String, dynamic> data = toSendMapDto();
+    if (currentPassword != null) data["current_password"] = currentPassword;
+    var response = await dio.patch(updateUserRoute(id!), data: data);
+    if (response.statusCode == 200 && response.data["status"] == 1) {
+      // Un changement de mot de passe révoque l'ancien token : le serveur en renvoie un nouveau
+      await _saveSession(MyUser.fromMap(response.data["user"]), response.data["token"]);
+      return currentUser;
+    }
+    throw ApiException(extractErrorMessage(response.data), statusCode: response.statusCode);
   }
 
 }

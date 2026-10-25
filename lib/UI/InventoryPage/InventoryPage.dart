@@ -43,7 +43,7 @@ class _InventoryPageState extends State<InventoryPage> {
 
   void onAddProductTap() async {
     await BarCodeService.scanBarCode(context: context).then((code)  {
-      if (code.isNotEmpty) {
+      if (code.isNotEmpty && code != "-1") {
         Product.getProductByCode(code).then((Product? product) {
           if (product != null ) {
             setState(() {

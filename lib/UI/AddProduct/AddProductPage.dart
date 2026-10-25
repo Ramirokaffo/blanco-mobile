@@ -11,6 +11,9 @@ import 'package:image_to_text/UI/MiniWidget/showSimpleDialog.dart';
 
 import '../../DATA/DataClass/Category.dart';
 import '../../DATA/DataClass/Gamme.dart';
+import '../../DATA/DataClass/Inventory.dart';
+import '../../DATA/DataClass/MyUser.dart';
+import '../../DATA/HttpRequest/ApiHelper.dart';
 import '../../DATA/DataClass/Product.dart';
 import '../../StateManager/AddArticlePageState.dart';
 import '../../StateManager/SendDataProgressBarState.dart';
@@ -61,7 +64,7 @@ class _AddProductPageState extends State<AddProductPage> {
 
   Future _onCodeTapOutside(String value) async {
     if (_codeIsVerify || widget.product != null) return;
-    await Product.makeGetRequest("/get_product_by_code/$value").then((value) {
+    await Product.findByCode(value).then((value) {
       if (value != null) {
         _existingProductId = value["id"];
         setState(() {
@@ -86,7 +89,7 @@ class _AddProductPageState extends State<AddProductPage> {
   Future _onNameTapOutside(String value) async {
     if (_nameIsVerify || widget.product != null) return;
 
-    await Product.makeGetRequest("/get_product_by_name/$value").then((value) {
+    await Product.findByName(value).then((value) {
       if (value != null) {
         _existingProductId = value["id"];
         setState(() {
@@ -255,7 +258,10 @@ class _AddProductPageState extends State<AddProductPage> {
     }
     setState(() {_isSending = true;});
     await _product.createProduct(cancelToken: _cancelToken,
-      progressCallBack: (progress) => refreshSendDataProgressBarState(context, progress), inventoryMode: (widget.isInventoryMode?? false)? 1: 0).then((value) {
+      progressCallBack: (progress) => refreshSendDataProgressBarState(context, progress)).then((createdProduct) async {
+      if (widget.isInventoryMode?? false) {
+        await _saveInventory(createdProduct, _product.stock?? 0);
+      }
       if (_clearInput) {
         _nameController.text = "";
         _codeController.text = "";
@@ -275,7 +281,7 @@ class _AddProductPageState extends State<AddProductPage> {
     }).onError((error, stackTrace) {
       refreshSendDataProgressBarState(context, 0);
       if (!error.toString().contains("Cancel by user")) {
-        showUniversalSnackBar(context: context, message: "Une erreur s'est produite !", backgroundColor: Colors.red);
+        showUniversalSnackBar(context: context, message: errorMessageOf(error, fallback: "Une erreur s'est produite !"), backgroundColor: Colors.red);
       } else {
         showUniversalSnackBar(context: context, message: "Envoi annulé avec succès !", backgroundColor: Colors.orange);
       }
@@ -284,6 +290,16 @@ class _AddProductPageState extends State<AddProductPage> {
     _codeIsVerify = false;
     _isSending = false;
     setState(() {});
+  }
+
+  /// Mode inventaire : le comptage du nouveau produit est enregistré comme
+  /// inventaire (l'ancien serveur le faisait via ?inventory_mode=1).
+  Future _saveInventory(Product createdProduct, int count) async {
+    await Inventory(product: createdProduct, staff: MyUser.currentUser,
+        validProductCount: count, invalidProductCount: 0).save().onError((error, stackTrace) {
+      showUniversalSnackBar(context: context, message: "Produit créé, mais l'inventaire n'a pas pu être enregistré : ${errorMessageOf(error)}", backgroundColor: Colors.orange);
+      return null;
+    });
   }
 
   void _updateProduct() async {
@@ -395,7 +411,7 @@ class _AddProductPageState extends State<AddProductPage> {
     }
     setState(() {_isSending = true;});
     await product.updateProduct(cancelToken: _cancelToken,
-      progressCallBack: (progress) => refreshSendDataProgressBarState(context, progress), inventoryMode: (widget.isInventoryMode?? false)? 1: 0).then((value) {
+      progressCallBack: (progress) => refreshSendDataProgressBarState(context, progress)).then((value) {
       if (_clearInput) {
         _nameController.text = "";
         _codeController.text = "";
@@ -416,7 +432,7 @@ class _AddProductPageState extends State<AddProductPage> {
     }).onError((error, stackTrace) {
       refreshSendDataProgressBarState(context, 0);
       if (!error.toString().contains("Cancel by user")) {
-        showUniversalSnackBar(context: context, message: "Une erreur s'est produite !", backgroundColor: Colors.red);
+        showUniversalSnackBar(context: context, message: errorMessageOf(error, fallback: "Une erreur s'est produite !"), backgroundColor: Colors.red);
       } else {
         showUniversalSnackBar(context: context, message: "Envoi annulé avec succès !", backgroundColor: Colors.orange);
       }
@@ -470,12 +486,8 @@ class _AddProductPageState extends State<AddProductPage> {
       _brandController.text = widget.product!.brand?? "";
       _descriptionController.text = widget.product!.description?? "";
       _grammageController.text = (widget.product!.grammage?? "").toString();
-      if (widget.product!.rightSupply != null) {
-        _unitPriceController.text = widget.product!.rightSupply!.unitPrice!.toString();
-      }
-      if (widget.product!.rightSupply != null) {
-        _unitCoastController.text = widget.product!.rightSupply!.unitCoast!.toString();
-      }
+      _unitPriceController.text = (widget.product!.unitPrice?? "").toString();
+      _unitCoastController.text = (widget.product!.unitCoast?? "").toString();
       if (widget.product!.category != null) {
         _categoryController.text = widget.product!.category!.name?? "";
       }

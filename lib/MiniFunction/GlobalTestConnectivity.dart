@@ -7,7 +7,9 @@ import '../AppService/BarCodeService.dart';
 import '../DATA/DataClass/MyUser.dart';
 
 void globalConnectivityTest(BuildContext context) async {
-  MyUser.testServerConnection(serverUri: await BarCodeService.scanBarCode(context: context)).then((value) {
+  String serverUri = await BarCodeService.scanBarCode(context: context);
+  if (serverUri == "-1") return;
+  MyUser.testServerConnection(serverUri: serverUri).then((value) {
     if (value["status"] == 1) {
       showUniversalSnackBar(context: context, message: 'Le test de connectivité au serveur a réussi', backgroundColor: Colors.green);
     } else {

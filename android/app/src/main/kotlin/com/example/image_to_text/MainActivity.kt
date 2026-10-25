@@ -1,4 +1,4 @@
-package com.example.image_to_text
+package com.blanco.novatech
 
 import io.flutter.embedding.android.FlutterActivity
 

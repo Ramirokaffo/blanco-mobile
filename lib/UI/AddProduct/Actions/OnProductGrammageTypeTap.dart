@@ -1,6 +1,8 @@
 
 import 'package:drop_down_list/model/selected_list_item.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:image_to_text/DATA/HttpRequest/ApiHelper.dart';
+import 'package:image_to_text/UI/MiniWidget/UniversalSnackBar.dart';
 import 'package:image_to_text/DATA/DataClass/GrammageType.dart';
 import 'package:image_to_text/DATA/DataClass/Product.dart';
 import '../../../ModalBottomWidget/SelectionModalDropDown.dart';
@@ -18,5 +20,7 @@ void onProductGrammageTypeTap(Product article, TextEditingController controller,
         refreshAddArticlePageState(context);
       }
     });
+  }).onError((error, stackTrace) {
+    showUniversalSnackBar(context: context, message: errorMessageOf(error));
   });
 }

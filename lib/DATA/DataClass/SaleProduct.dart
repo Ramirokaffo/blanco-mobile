@@ -2,7 +2,7 @@
 
 import 'package:image_to_text/DATA/DataClass/Product.dart';
 
-import '../HttpRequest/dioConstructor.dart';
+import '../HttpRequest/ApiHelper.dart';
 import 'Sale.dart';
 
 class SaleProduct {
@@ -35,9 +35,8 @@ class SaleProduct {
 
   SaleProduct.fromMap(Map<String, dynamic> basketArticle) {
     id = basketArticle["id"];
-    productCount = basketArticle["article_count"];
-    // isPaid = basketArticle["is_paid"];
-    unitPrice = basketArticle["unit_price"].toDouble();
+    productCount = toInt(basketArticle["quantity"]);
+    unitPrice = toDouble(basketArticle["unit_price"]);
   }
 
   // static Future<List<BasketArticle>?>? getPopularBasketArticle(String serverUri, {int count = 0, int page = 0}) async {
@@ -68,9 +67,9 @@ class SaleProduct {
 
   Map<String, dynamic> toSendMapDto() {
     return {
-      "product_count": productCount,
+      "product_id": product!.id,
+      "quantity": productCount,
       "unit_price": unitPrice,
-      "product_id": product!.id
     };
   }
 

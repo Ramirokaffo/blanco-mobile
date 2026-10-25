@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_to_text/DATA/DataClass/Product.dart';
 import 'package:image_to_text/DATA/DataClass/ProductImage.dart';
 import 'package:image_to_text/UI/MiniWidget/UniversalSnackBar.dart';
+import 'package:image_to_text/DATA/HttpRequest/ApiHelper.dart';
 
 
 import '../../../StateManager/AddArticlePageState.dart';
@@ -23,7 +24,7 @@ void onDeleteImageTap(BuildContext context, Product article, int imageIndex) {
       showUniversalSnackBar(context: context, message: "Une erreur s'est produite !", backgroundColor: Colors.red);
     }
   }).onError((error, stackTrace) {
-    showUniversalSnackBar(context: context, message: "Une erreur s'est produite !", backgroundColor: Colors.red);
+    showUniversalSnackBar(context: context, message: errorMessageOf(error, fallback: "Une erreur s'est produite !"), backgroundColor: Colors.red);
   });
 
 }

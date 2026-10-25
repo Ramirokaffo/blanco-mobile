@@ -3,6 +3,8 @@
 
 import 'package:drop_down_list/model/selected_list_item.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:image_to_text/DATA/HttpRequest/ApiHelper.dart';
+import 'package:image_to_text/UI/MiniWidget/UniversalSnackBar.dart';
 import 'package:image_to_text/DATA/DataClass/Product.dart';
 import '../../../DATA/DataClass/Category.dart';
 import '../../../DATA/DataClass/Gamme.dart';
@@ -20,5 +22,7 @@ void onArticleGammeTap(Product article, TextEditingController controller, BuildC
         refreshAddArticlePageState(context);
       }
     });
+  }).onError((error, stackTrace) {
+    showUniversalSnackBar(context: context, message: errorMessageOf(error));
   });
 }

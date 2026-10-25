@@ -5,6 +5,7 @@ import 'package:image_to_text/StateManager/InventoryPageState.dart';
 import 'package:image_to_text/UI/MiniWidget/UniversalSnackBar.dart';
 
 import '../../DATA/DataClass/MyUser.dart';
+import '../../DATA/HttpRequest/ApiHelper.dart';
 import '../ProductDetails/ProductDetailsPage.dart';
 
 
@@ -43,7 +44,7 @@ class _OneInventoryWidgetState extends State<OneInventoryWidget> {
         showUniversalSnackBar(context: context, message: "Enregistrement effectué avec succès !", backgroundColor: Colors.green);
       }
     }).onError((error, stackTrace) {
-      showUniversalSnackBar(context: context, message: "Une erreur s'est produite !", backgroundColor: Colors.red);
+      showUniversalSnackBar(context: context, message: errorMessageOf(error, fallback: "Une erreur s'est produite !"), backgroundColor: Colors.red);
     });
     setState(() {
       _isSending = false;

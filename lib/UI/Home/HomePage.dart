@@ -1,6 +1,5 @@
 
 import 'package:flutter/material.dart';
-import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'package:image_to_text/DATA/DataClass/MyUser.dart';
 
 import 'package:image_to_text/UI/AddProduct/AddProductPage.dart';
@@ -9,6 +8,7 @@ import 'package:image_to_text/UI/SaleProduct/SaleProductPage.dart';
 import 'package:image_to_text/MiniFunction/UniversalFooterShown.dart';
 
 import '../../AppService/BarCodeService.dart';
+import '../../DATA/HttpRequest/ApiHelper.dart';
 import '../InventoryPage/InventoryPage.dart';
 import '../ListProduct/ListProductPage.dart';
 import '../MiniWidget/UniversalSnackBar.dart';
@@ -118,7 +118,7 @@ class _HomePageState extends State<HomePage> {
     }).onError((error, stackTrace) {
       _isReloadingUser = false;
       setState(() {});
-      showUniversalSnackBar(context: context, message: 'Une erreur s\'est produite');
+      showUniversalSnackBar(context: context, message: errorMessageOf(error));
     });
   }
 

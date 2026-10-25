@@ -170,6 +170,7 @@ class _ListProductPageState extends State<ListProductPage> {
         actions: [
           IconButton(onPressed: () async {
             await BarCodeService.scanBarCode(context: context).then((code) async  {
+              if (code == "-1") return;
               Product.getProductByCode(code).then((value) {
                 if (value != null) {
                   Navigator.of(context).push(MaterialPageRoute(builder: (context) => ProductDetailsPage(productId: value.id!),));

@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:image_to_text/DATA/DataClass/MyUser.dart';
 import 'package:image_to_text/LocalBdManager/LocalBdManager.dart';
-import 'package:image_to_text/UI/MiniWidget/showSimpleDialog.dart';
 
 import '../LoginPage.dart';
 
+/// Saisie du mot de passe. Le serveur Django applique ses règles de mot de
+/// passe (8 caractères minimum, pas uniquement des chiffres) : l'ancien code
+/// PIN à 5 chiffres est remplacé par un mot de passe classique.
 class AuthentificationPage extends StatefulWidget {
   final String title;
   final String? password;
   final String? login;
   final Future<bool> Function(String value)? onCompleted;
-  const AuthentificationPage({Key? key, required this.title, this.password, this.onCompleted, this.login}) : super(key: key);
+  /// Contrôle local de robustesse (création de compte)
+  final bool checkStrength;
+  const AuthentificationPage({Key? key, required this.title, this.password, this.onCompleted, this.login, this.checkStrength = false}) : super(key: key);
 
   @override
   State<AuthentificationPage> createState() => _AuthentificationPageState();
@@ -18,53 +22,24 @@ class AuthentificationPage extends StatefulWidget {
 
 class _AuthentificationPageState extends State<AuthentificationPage> {
 
-  late TextEditingController currentController;
-  int currentIndex = 0;
-  late List<TextEditingController> listController;
+  final TextEditingController _passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
   late String _login;
+  bool _obscureText = true;
+  bool _isSending = false;
 
-  Widget oneValue(int index, TextEditingController controller) {
-    return Container(
-      width: 50,
-      height: 50,
-      decoration: BoxDecoration(
-        // border: Border.all(color: Colors.black38),
-          borderRadius: BorderRadius.circular(5),
-          color: Theme.of(context).colorScheme.inversePrimary.withOpacity(0.1)
-      ),
-      child: TextFormField(
-        // maxLength: 1,
-        controller: controller,
-        obscureText: true,
-        onTap: (){
-          currentIndex = index;
-        },
-        onChanged: (value)  {
-          print(value);
-          FocusScope.of(context).nextFocus();
-          currentController = listController[++index];
-          currentIndex++;
-          print(index);
-
-        },
-        autofocus: index == 0,
-        keyboardType: TextInputType.none,
-        textAlign: TextAlign.center,
-        style: const TextStyle(fontSize: 20),
-        decoration: const InputDecoration(
-          border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
-        ),
-      ),
-    );
-  }
   void onFillCompleted() async {
-  if (widget.onCompleted != null) {
-  if (!(await widget.onCompleted!(listController.map((e) => e.text).toList().join("")))) {
-  clearAllEntry();
+    if (!_formKey.currentState!.validate() || _isSending) return;
+    if (widget.onCompleted != null) {
+      setState(() {_isSending = true;});
+      bool success = await widget.onCompleted!(_passwordController.text);
+      if (!mounted) return;
+      setState(() {_isSending = false;});
+      if (!success) {
+        clearAllEntry();
+      }
+    }
   }
-  }
-  return;
-}
 
 void _onLoginTap() {
     TextEditingController controller = TextEditingController(text: _login);
@@ -92,43 +67,25 @@ void _onLoginTap() {
     },);
 }
 
-  void fillForm(String value) async {
-    if (currentIndex >= listController.length) {
-      onFillCompleted();
-    } else if (currentIndex == listController.length - 1) {
-      listController[currentIndex++].text = value;
-      onFillCompleted();
-    } else {
-      setState(() {
-        listController[currentIndex++].text = value;
-      });
-      FocusScope.of(context).nextFocus();
-    }
-
-  }
-
-  void clearOneEntry() {
-    setState(() {
-      if (List.generate(listController.length, (index) => index + 1).contains(currentIndex)) {
-        print([1, listController.length].contains(currentIndex));
-        if (listController[currentIndex-1].text.isNotEmpty) {
-          listController[currentIndex--].text = "";
-        } else {
-          listController[currentIndex-- - 1].text = "";
-        }
-        FocusScope.of(context).previousFocus();
-      }
-    });
-    print("ici");
-
-  }
-
-
   void clearAllEntry() {
     setState(() {
-      listController.forEach((element) {element.text = "";});
-      currentIndex = 0;
+      _passwordController.text = "";
     });
+  }
+
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return "Ce champs est obligatoire !";
+    }
+    if (widget.checkStrength) {
+      if (value.length < 8) {
+        return "Au moins 8 caractères";
+      }
+      if (RegExp(r'^\d+$').hasMatch(value)) {
+        return "Le mot de passe ne peut pas contenir uniquement des chiffres";
+      }
+    }
+    return null;
   }
 
 void getLocalLogin() async {
@@ -150,31 +107,16 @@ void getLocalLogin() async {
     if (widget.login == null) {
       getLocalLogin();
     }
-    listController = List.generate(5, (index) => TextEditingController());
-    currentController = listController[0];
   }
-  Widget oneButton(String text, Function onTap, { IconData? icon }) {
-    return InkWell(
-      onTap: (){
-        onTap();
-      },
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-            color: icon == null? Colors.white: Theme.of(context).colorScheme.primary,
-            shape: BoxShape.circle,
-            border: Border.all(color: Theme.of(context).colorScheme.primary)
-        ),
-        child: icon == null? Text(text,
-          style: const TextStyle(color: Colors.black,
-              fontWeight: FontWeight.bold, fontSize: 25),): Icon(icon, color: Colors.white, size: 15),
-      ),
-    );
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    int index = 0;
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.primary,
       body: ListView(
@@ -209,7 +151,7 @@ void getLocalLogin() async {
               ),
               child: Column(
                 children: [
-                  // const SizedBox(height: 20,),
+                  const SizedBox(height: 20,),
                   Container(
                       alignment: Alignment.topLeft,
                       child: Row(
@@ -221,57 +163,54 @@ void getLocalLogin() async {
                               child: Text(_login, style: const TextStyle(fontWeight: FontWeight.bold,), textAlign: TextAlign.left,)),
                         ],
                       )),
-                  const SizedBox(height: 10,),
-                  Form(child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: listController.map((e) => oneValue(index++, e)).toList(),)),
+                  const SizedBox(height: 20,),
+                  Form(
+                    key: _formKey,
+                    child: TextFormField(
+                      controller: _passwordController,
+                      obscureText: _obscureText,
+                      autofocus: true,
+                      enableSuggestions: false,
+                      autocorrect: false,
+                      validator: _validatePassword,
+                      onFieldSubmitted: (value) => onFillCompleted(),
+                      decoration: InputDecoration(
+                        border: const OutlineInputBorder(borderSide: BorderSide(color: Colors.orange)),
+                        hintText: "Mot de passe",
+                        helperText: widget.checkStrength? "Au moins 8 caractères, pas uniquement des chiffres": null,
+                        suffixIcon: IconButton(
+                          icon: Icon(_obscureText? Icons.visibility: Icons.visibility_off),
+                          onPressed: () => setState(() {_obscureText = !_obscureText;}),
+                        ),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 30,),
-                  Container(
-                    height: 380,
-                    padding: const EdgeInsets.all(20),
-                    width: MediaQuery.of(context).size.width,
-                    decoration: BoxDecoration(
-                        border: Border.all(color: Theme.of(context).colorScheme.primary),
-                        borderRadius: BorderRadius.circular(10),
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            oneButton("1", () => fillForm("1")),
-                            oneButton("2", () => fillForm("2")),
-                            oneButton("3", () => fillForm("3")),
-                          ],
+                  Row(
+                    children: [
+                      IconButton(
+                        style: ButtonStyle(side: MaterialStatePropertyAll(BorderSide(color: Theme.of(context).colorScheme.primary))),
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.arrow_back_sharp),
+                      ),
+                      const SizedBox(width: 20,),
+                      Expanded(
+                        child: InkWell(
+                          onTap: onFillCompleted,
+                          child: Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primary,
+                                borderRadius: BorderRadius.circular(10)
+                            ),
+                            child: _isSending? const Center(child: SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))):
+                            const Text("Valider",
+                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              textAlign: TextAlign.center,),
+                          ),
                         ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            oneButton("4", () => fillForm("4")),
-                            oneButton("5", () => fillForm("5")),
-                            oneButton("6", () => fillForm("6")),
-                          ],
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            oneButton("7", () => fillForm("7")),
-                            oneButton("8", () => fillForm("8")),
-                            oneButton("9", () => fillForm("9")),
-                          ],
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            oneButton("", () => Navigator.pop(context), icon: Icons.arrow_back_sharp),
-                            oneButton("0", () => fillForm("8")),
-                            oneButton("", () => clearOneEntry(), icon: Icons.clear),
-                          ],
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 20,),
                   Row(

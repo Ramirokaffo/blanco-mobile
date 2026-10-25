@@ -1,12 +1,12 @@
 
-
 import 'package:dio/dio.dart';
 import 'package:image_to_text/DATA/DataClass/Category.dart';
 import 'package:image_to_text/DATA/DataClass/Gamme.dart';
 import 'package:image_to_text/DATA/DataClass/GrammageType.dart';
-import 'package:image_to_text/DATA/DataClass/MyUser.dart';
 
 import '../../LocalBdManager/LocalBdManager.dart';
+import '../HttpRequest/ApiHelper.dart';
+import '../HttpRequest/RouteFile.dart';
 import '../HttpRequest/dioConstructor.dart';
 import 'ProductImage.dart';
 import 'Rayon.dart';
@@ -61,6 +61,7 @@ class Product {
     this.stock,
     this.rayonId,
     this.gamme,
+    this.gammeId,
     this.isPriceReducible,
     this.grammageTypeId,
     this.grammageType,
@@ -76,186 +77,209 @@ class Product {
     name = article["name"];
     code = article["code"];
     brand = article["brand"];
-    stock = int.tryParse(article["stock"]?? "0");
+    stock = toInt(article["stock"])?? 0;
     description = article["description"];
     color = article["color"];
-    grammage = article["grammage"];
-    unitPrice = article["unit_price"];
-    unitCoast = article["unit_coast"];
-    supplyId = article["supply_id"];
+    grammage = toDouble(article["grammage"]);
+    unitPrice = toDouble(article["actual_price"]);
+    unitCoast = toDouble(article["last_purchase_price"]);
+    supplyId = null;
     category = Category.fromMap(article["category"]);
     rayon = Rayon.fromMap(article["rayon"]);
     gamme = Gamme.fromMap(article["gamme"]);
     grammageType = GrammageType.fromMap(article["grammage_type"]);
-    maxSalablePrice = double.tryParse(article["max_salable_price"]?? "");
-    expAlertPeriod = article["expAlertPeriod"];
-    isPriceReducible = [1, true].contains(article["is_price_reducible"]);
-    stockLimit = article["stockLimit"];
-    rightSupply = Supply.fromMap(article["right_supply"]);
-    images = article["images"] != null? (article["images"] as List<dynamic>).map((e) => ProductImage.fromMap(e)).toList(): null;
+    categoryId = category!.id;
+    rayonId = rayon!.id;
+    gammeId = gamme!.id;
+    grammageTypeId = grammageType!.id;
+    maxSalablePrice = toDouble(article["max_salable_price"]);
+    expAlertPeriod = toInt(article["exp_alert_period"]);
+    isPriceReducible = toBool(article["is_price_reducible"]);
+    stockLimit = toInt(article["stock_limit"]);
+    createAt = article["create_at"];
+    deleteAt = article["delete_at"];
+    // Le serveur ne gère plus de "bon approvisionnement" : le prix de vente
+    // est porté par le produit (actual_price). On garde rightSupply pour
+    // l'interface existante.
+    rightSupply = Supply(productCount: stock, productCountRest: stock, unitPrice: unitPrice?? 0, unitCoast: unitCoast);
+    images = article["images"] != null? (article["images"] as List<dynamic>).map((e) => ProductImage.fromMap(e)).toList(): [];
   }
 
   bool isNotEmpty() {
     return name != null || code != null || brand != null ||
         stock != null || description != null || color != null || grammage
-        != null || unitPrice != null || unitCoast != null || category != null
-        || rayon != null || gamme != null || grammageType != null ||
+        != null || unitPrice != null || unitCoast != null || categoryId != null
+        || rayonId != null || gammeId != null ||
         grammageTypeId != null || maxSalablePrice != null || expAlertPeriod
         != null || isPriceReducible != null || stockLimit != null ||
-        rightSupply != null || (images != null && images!.isNotEmpty);
+        (images != null && images!.isNotEmpty);
   }
 
 
+  /// Champs envoyés au serveur (ProductCreateSerializer / ProductUpdateSerializer).
+  /// Les champs nuls sont omis : en mise à jour partielle, seuls les champs
+  /// modifiés sont envoyés.
   Map<String, dynamic> toSendMapDto() {
-    return {
-      "id": id,
+    Map<String, dynamic> data = {
       "code": code,
       "name": name,
       "brand": brand,
       "stock": stock,
       "grammage": grammage,
-      "unit_price": unitPrice,
-      "unit_coast": unitCoast,
-      "rayon_id": rayonId,
-      "gamme_id": gamme,
-      "category_id": categoryId,
-      "grammage_type_id": grammageTypeId,
-      "description": (description?? "").isNotEmpty? description: null,
+      "actual_price": unitPrice,
+      "last_purchase_price": unitCoast,
+      "rayon": rayonId,
+      "gamme": gammeId,
+      "category": categoryId,
+      "grammage_type": grammageTypeId,
+      "description": description,
+      "color": color,
       "max_salable_price": (maxSalablePrice?? 0.0) != 0.0? maxSalablePrice: null,
       "exp_alert_period": (expAlertPeriod?? 0) != 0? expAlertPeriod: null,
       "stock_limit": (stockLimit?? 0) != 0? stockLimit: null,
-      "images": images?.map((image) => image.toSendMapDto()).toList(),
+      "is_price_reducible": isPriceReducible,
     };
+    data.removeWhere((key, value) => value == null);
+    return data;
   }
 
+  static Future<Dio> _dio({String? serverUri, Duration? receiveTimeout}) async {
+    String uri = serverUri?? await LocalBdManager.localBdSelectSetting("serverUri");
+    return receiveTimeout != null? dioConstructor(uri, receiveTimeout: receiveTimeout): dioConstructor(uri);
+  }
+
+  static List<Product> _productList(dynamic data) {
+    return data is List? data.map((value) => Product.fromMap(value)).toList(): [];
+  }
 
   static Future makeGetRequest(String path, {CancelToken? cancelToken, String? serverUri}) async {
-    var dio = dioConstructor(serverUri?? await LocalBdManager.localBdSelectSetting("serverUri"), extraHeader: {"userId": MyUser.currentUser.id});
+    var dio = await _dio(serverUri: serverUri);
     var response = await dio.get(path, cancelToken: cancelToken);
     if (response.statusCode == 200) {
       return response.data;
-    } else {
-      // return
     }
+    throw ApiException(extractErrorMessage(response.data), statusCode: response.statusCode);
   }
 
-  static Future<Product?> getProductByCode(String code, {CancelToken? cancelToken, String? serverUri, int? returnAll = 0}) async {
-    var dio = dioConstructor(serverUri?? await LocalBdManager.localBdSelectSetting("serverUri"), extraHeader: {"userId": MyUser.currentUser.id});
-    var response = await dio.get("/get_product_by_code/$code?return_all=$returnAll", cancelToken: cancelToken);
+  /// Produit portant ce code, ou null s'il n'existe pas.
+  static Future<Map<String, dynamic>?> findByCode(String code, {CancelToken? cancelToken}) async {
+    var data = await makeGetRequest(productByCodeRoute(code), cancelToken: cancelToken);
+    return data is Map<String, dynamic>? data: null;
+  }
+
+  /// Produit portant ce nom, ou null s'il n'existe pas.
+  static Future<Map<String, dynamic>?> findByName(String name, {CancelToken? cancelToken}) async {
+    var data = await makeGetRequest(productByNameRoute(name), cancelToken: cancelToken);
+    return data is Map<String, dynamic>? data: null;
+  }
+
+  static Future<Product?> getProductByCode(String code, {CancelToken? cancelToken, String? serverUri}) async {
+    var dio = await _dio(serverUri: serverUri);
+    var response = await dio.get(productByCodeRoute(code), cancelToken: cancelToken);
     if (response.statusCode == 200) {
-      return response.data != null? Product.fromMap(response.data): null;
+      // Produit introuvable : le serveur répond 200 avec un corps vide
+      return response.data is Map<String, dynamic>? Product.fromMap(response.data): null;
     }
-    return null;
+    throw ApiException(extractErrorMessage(response.data), statusCode: response.statusCode);
   }
 
   static Future<Product?> getProductById(int productId, {CancelToken? cancelToken, String? serverUri}) async {
-    var dio = dioConstructor(serverUri?? await LocalBdManager.localBdSelectSetting("serverUri"), extraHeader: {"userId": MyUser.currentUser.id});
-    var response = await dio.get("/get_product_by_id/$productId", cancelToken: cancelToken);
+    var dio = await _dio(serverUri: serverUri);
+    var response = await dio.get(productByIdRoute(productId), cancelToken: cancelToken);
     if (response.statusCode == 200) {
-      return response.data != null? Product.fromMap(response.data): null;
+      return response.data is Map<String, dynamic>? Product.fromMap(response.data): null;
     }
-    return null;
+    if (response.statusCode == 404) return null;
+    throw ApiException(extractErrorMessage(response.data), statusCode: response.statusCode);
   }
 
   static Future<List<Product>?> getProductList({int page = 0, int count = 20, CancelToken? cancelToken, String? serverUri}) async {
-    var dio = dioConstructor(serverUri?? await LocalBdManager.localBdSelectSetting("serverUri"), extraHeader: {"userId": MyUser.currentUser.id});
-    var response = await dio.get("/get_product_list/$page/$count", cancelToken: cancelToken);
+    var dio = await _dio(serverUri: serverUri);
+    var response = await dio.get(productListRoute, queryParameters: {"page": page, "count": count}, cancelToken: cancelToken);
     if (response.statusCode == 200) {
-      return response.data != null? (response.data as List<dynamic>).map((value) => Product.fromMap(value)).toList(): null;
+      return _productList(response.data);
     }
-    return null;
+    throw ApiException(extractErrorMessage(response.data), statusCode: response.statusCode);
   }
 
+  /// L'API Django n'a pas d'équivalent à l'ancienne route
+  /// /get_product_with_any_unit_coast : le prix d'achat n'est exposé par aucune
+  /// route de lecture.
   static Future<List<Product>?> getProductWithAnyUnitCoast({int page = 0, int count = 20, CancelToken? cancelToken, String? serverUri}) async {
-    var dio = dioConstructor(serverUri?? await LocalBdManager.localBdSelectSetting("serverUri"), extraHeader: {"userId": MyUser.currentUser.id});
-    var response = await dio.get("/get_product_with_any_unit_coast/$page/$count", cancelToken: cancelToken);
-    if (response.statusCode == 200) {
-      return response.data != null? (response.data as List<dynamic>).map((value) => Product.fromMap(value)).toList(): null;
-    }
-    return null;
+    throw ApiException("Cette liste n'est pas disponible sur ce serveur");
   }
 
   static Future<List<Product>?> getSearchResult(String searchInput, {int page = 0, int count = 20, CancelToken? cancelToken, String? serverUri}) async {
-    var dio = dioConstructor(serverUri?? await LocalBdManager.localBdSelectSetting("serverUri"), extraHeader: {"userId": MyUser.currentUser.id});
-    var response = await dio.get("/search_product?search_input=$searchInput&page=$page&count=$count", cancelToken: cancelToken);
+    // Le serveur exige au moins 2 caractères : en deçà on affiche la liste complète
+    if (searchInput.trim().length < 2) {
+      return getProductList(page: page, count: count, cancelToken: cancelToken, serverUri: serverUri);
+    }
+    var dio = await _dio(serverUri: serverUri);
+    var response = await dio.get(productSearchRoute,
+        queryParameters: {"search_input": searchInput.trim(), "page": page, "count": count}, cancelToken: cancelToken);
     if (response.statusCode == 200) {
-      return response.data != null? (response.data as List<dynamic>).map((value) => Product.fromMap(value)).toList(): null;
+      return _productList(response.data);
     }
-    return null;
+    throw ApiException(extractErrorMessage(response.data), statusCode: response.statusCode);
   }
 
-  Future createProduct({String? serverUri, void Function(double progess)? progressCallBack, CancelToken? cancelToken, int? inventoryMode = 0}) async {
-    var dio = dioConstructor(serverUri?? await LocalBdManager.localBdSelectSetting("serverUri"), extraHeader: {"userId": MyUser.currentUser.id});
-    List listImages = [];
+  Future<FormData> _formData() async {
+    List<MultipartFile> listImages = [];
     for (ProductImage image in images?? []) {
       if (image.imageFile != null) {
         listImages.add(await MultipartFile.fromFile(
           image.imageFile!.path,
           filename: image.imageFile!.name,
-          headers: {
-            "description": [(image.description?? "").toString()]
-          },
         ));
       }
     }
-    var formData =
-    FormData.fromMap({"images": listImages, "": toSendMapDto()});
+    Map<String, dynamic> fields = toSendMapDto();
+    if (listImages.isNotEmpty) fields["images"] = listImages;
+    return FormData.fromMap(fields, ListFormat.multi);
+  }
+
+  /// Crée le produit (et son approvisionnement initial si stock > 0).
+  /// Renvoie le produit créé.
+  Future<Product> createProduct({String? serverUri, void Function(double progess)? progressCallBack, CancelToken? cancelToken}) async {
+    var dio = await _dio(serverUri: serverUri, receiveTimeout: const Duration(seconds: 60));
+    // En multipart, DRF lit un booléen absent comme false : on envoie la
+    // valeur par défaut du modèle (prix réductible)
+    isPriceReducible ??= true;
     var response = await dio.post(
-      '/create_product?inventory_mode=$inventoryMode',
-      data: formData,
+      createProductRoute,
+      data: await _formData(),
       cancelToken: cancelToken,
       onSendProgress: (count, total) {
-        if (progressCallBack != null) {
+        if (progressCallBack != null && total > 0) {
           progressCallBack(count / total);
-          // Future.delayed(
-          //   const Duration(milliseconds: 1000),
-          // );
         }
       },
     );
-    if ([201, 200].contains(response.statusCode)) {
-      return response.data;
-    } else {
-      throw Exception();
+    if ([201, 200].contains(response.statusCode) && response.data["status"] == 1) {
+      return Product.fromMap(response.data["product"]);
     }
-
+    throw ApiException(extractErrorMessage(response.data), statusCode: response.statusCode);
   }
 
-  Future updateProduct({String? serverUri, void Function(double progess)? progressCallBack, CancelToken? cancelToken, int? inventoryMode = 0}) async {
-    var dio = dioConstructor(serverUri?? await LocalBdManager.localBdSelectSetting("serverUri"), extraHeader: {"userId": MyUser.currentUser.id});
-    List listImages = [];
-    for (ProductImage image in images?? []) {
-      if (image.imageFile != null) {
-        listImages.add(await MultipartFile.fromFile(
-          image.imageFile!.path,
-          filename: image.imageFile!.name,
-          headers: {
-            "description": [(image.description?? "").toString()]
-          },
-        ));
-      }
-    }
-    print(toSendMapDto());
-    var formData =
-    FormData.fromMap({"images": listImages, "": toSendMapDto()});
+  /// Mise à jour partielle : seuls les champs renseignés sont envoyés.
+  /// Le stock n'est pas modifiable par cette voie (approvisionnement ou inventaire).
+  Future<Product> updateProduct({String? serverUri, void Function(double progess)? progressCallBack, CancelToken? cancelToken}) async {
+    var dio = await _dio(serverUri: serverUri, receiveTimeout: const Duration(seconds: 60));
+    stock = null;
     var response = await dio.patch(
-      '/update_product',
-      data: formData,
+      updateProductRoute(id!),
+      data: await _formData(),
       cancelToken: cancelToken,
       onSendProgress: (count, total) {
-        if (progressCallBack != null) {
+        if (progressCallBack != null && total > 0) {
           progressCallBack(count / total);
-          // Future.delayed(
-          //   const Duration(milliseconds: 1000),
-          // );
         }
       },
     );
-    if ([201, 200].contains(response.statusCode)) {
-      return response.data;
-    } else {
-      throw Exception();
+    if (response.statusCode == 200 && response.data["status"] == 1) {
+      return Product.fromMap(response.data["product"]);
     }
+    throw ApiException(extractErrorMessage(response.data), statusCode: response.statusCode);
   }
 
 

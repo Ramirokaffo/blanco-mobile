@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:path/path.Dart';
+import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 class LocalBdManager {
@@ -9,8 +9,13 @@ class LocalBdManager {
     var databasesPath = await getDatabasesPath();
     String path = join(databasesPath, 'local.db');
     var database = await openDatabase(path);
-    await database.rawUpdate('UPDATE setting SET valeur = ? WHERE name = ?',
+    int count = await database.rawUpdate('UPDATE setting SET valeur = ? WHERE name = ?',
         [newSettingValue, settingName]);
+    // Réglage ajouté après la création de la base (ex: "token") : on l'insère
+    if (count == 0) {
+      await database.rawInsert('INSERT INTO setting (name, valeur) VALUES (?, ?)',
+          [settingName, newSettingValue]);
+    }
     await database.close();
   }
 
@@ -87,7 +92,7 @@ class LocalBdManager {
     List<Map> list = await database
         .rawQuery('SELECT valeur FROM setting WHERE name = ?', [settingName]);
     await database.close();
-    return list[0]["valeur"];
+    return list.isNotEmpty? list[0]["valeur"]: "none";
   }
 
   // static Future getUserLocalLogin(String settingName) async {

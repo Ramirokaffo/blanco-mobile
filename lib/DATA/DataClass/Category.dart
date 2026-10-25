@@ -1,9 +1,9 @@
 
 
-import 'package:image_to_text/DATA/DataClass/MyUser.dart';
 import 'package:image_to_text/DATA/DataClass/Product.dart';
 
 import '../../LocalBdManager/LocalBdManager.dart';
+import '../HttpRequest/ApiHelper.dart';
 import '../HttpRequest/RouteFile.dart';
 import '../HttpRequest/dioConstructor.dart';
 
@@ -29,37 +29,22 @@ class Category {
       return allCategoryList;
     } else {
       try {
-        var dio = dioConstructor(await LocalBdManager.localBdSelectSetting("serverUri"),
-        extraHeader: {"userId": await MyUser.getCurrentUser()});
-        var response = await dio.get("/get_category",);
+        var dio = dioConstructor(await LocalBdManager.localBdSelectSetting("serverUri"));
+        var response = await dio.get(categoriesRoute);
         if (response.statusCode == 200) {
           // print("response.data: ${response.data}");
           allCategoryList.addAll((response.data as List<dynamic>).map((category) => Category.fromMap(category)));
           // print(allCategoryList[0].name);
           return allCategoryList;
         }
+        throw ApiException(extractErrorMessage(response.data), statusCode: response.statusCode);
       } catch (e) {
         print(e);
-        throw Exception(e);
+        rethrow;
       }
     }
-    return [];
   }
 
-  void createCategory(String serverUri, String name, String image) async {
-    var dio = dioConstructor(serverUri);
-    var response = await dio.post(
-      createPaymentMethodRoute,
-      data: {"name": name, "iconImage": image},
-    );
-    if (response.statusCode != 201) {
-      print(response.statusMessage);
-      print(response.extra);
-      print(response.headers);
-      print(response.data);
-      throw Exception();
-    }
-  }
 
 
 

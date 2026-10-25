@@ -1,50 +1,36 @@
-const serverDomainName = '192.168.213.5:8000'; //  Point d'acces android Tecno
-// const serverDomainName = '192.168.2.9:3002'; //  WIFI stage
+// Routes de l'API Django (core/api_urls.py). Toutes sont préfixées par /api/.
 
 const String appProtocol = "http";
 
+// Auth
+const String loginRoute = "/api/auth/login/";
 
+// Utilisateurs
+const String createUserRoute = "/api/staff/";
+String userByIdRoute(int id) => "/api/staff/$id/";
+String updateUserRoute(int id) => "/api/staff/$id/update/";
 
+// Produits
+const String productListRoute = "/api/products/list/";
+const String productSearchRoute = "/api/products/search/";
+const String createProductRoute = "/api/products/";
+String productByIdRoute(int id) => "/api/products/$id/";
+String productByCodeRoute(String code) => "/api/products/by-code/${Uri.encodeComponent(code)}/";
+String productByNameRoute(String name) => "/api/products/by-name/${Uri.encodeComponent(name)}/";
+String updateProductRoute(int id) => "/api/products/$id/update/";
+String imageRoute(String folder, String image) => "/api/images/$folder/${Uri.encodeComponent(image)}/";
 
+// Données de référence
+const String categoriesRoute = "/api/categories/";
+const String rayonsRoute = "/api/rayons/";
+const String gammesRoute = "/api/gammes/";
+const String grammageTypesRoute = "/api/grammage-types/";
 
+// Ventes
+const String createSaleRoute = "/api/sales/";
 
-//Category Routes
-const getAllCategoryRoute = "/category/getAll";
+// Inventaire
+const String createInventoryRoute = "/api/inventory/";
 
-// Product routes
-const createProductRoute = "/article/getByCategory";
-
-// Article Routes
-const getArticlesByCategoryRoute = "/article/getByCategory";
-const getRecentArticlesRoute = "/article/getRecent";
-const getPopularArticleRoute = "/article/getPopular";
-const getSellerArticlesByIdRoute = "/article/getBySellerId";
-const getArticlesByShopIdRoute = "/article/getByShopId";
-
-
-// BasketArticle Routes
-const getPopularBasketArticleRoute = "/basket-article/getPopular";
-
-// UserRoute
-const getOneUserDataByIdRoute = "/user";
-const userCreateAccountRoute = "/user/create";
-
-
-// SellerRoute
-// const getSellerArticlesByIdRoute = "/article/getBySellerId";
-
-
-// BasketRoute
-const createBasketRoute = "/basket/create";
-
-// CategoryRoute
-const createCategoryRoute = "/category/create";
-
-// Payment Method Route
-const getAllPaymentMethodRoute = "/payment-method/getAll";
-const createPaymentMethodRoute = "/payment-method/create";
-
-
-const String testToken =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6OCwicm9sZSI6InVzZXIiLCJpYXQiO"
-    "jE2OTIwNjkzMTksImV4cCI6MzYwMDAwMTY5MjA2OTMxOX0.MaSz3cXzVFRkshtH1Zq0-b7YL5e3K_R05ZoXnr2Z5CE";
+// Utilitaires
+const String testConnectionRoute = "/api/test-connection/";

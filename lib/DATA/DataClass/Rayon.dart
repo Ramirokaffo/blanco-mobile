@@ -3,6 +3,7 @@
 import 'package:image_to_text/DATA/DataClass/Product.dart';
 
 import '../../LocalBdManager/LocalBdManager.dart';
+import '../HttpRequest/ApiHelper.dart';
 import '../HttpRequest/RouteFile.dart';
 import '../HttpRequest/dioConstructor.dart';
 
@@ -29,35 +30,21 @@ class Rayon {
     } else {
       try {
         var dio = dioConstructor(await LocalBdManager.localBdSelectSetting("serverUri"));
-        var response = await dio.get("/get_rayon");
+        var response = await dio.get(rayonsRoute);
         if (response.statusCode == 200) {
           // print("response.data: ${response.data}");
           allRayonList.addAll((response.data as List<dynamic>).map((rayon) => Rayon.fromMap(rayon)));
           // print(allCategoryList[0].name);
           return allRayonList;
         }
+        throw ApiException(extractErrorMessage(response.data), statusCode: response.statusCode);
       } catch (e) {
         print(e);
-        throw Exception(e);
+        rethrow;
       }
     }
-    return [];
   }
 
-  void createCategory(String serverUri, String name, String description) async {
-    var dio = dioConstructor(serverUri);
-    var response = await dio.post(
-      createPaymentMethodRoute,
-      data: {"name": name, "description": description},
-    );
-    if (response.statusCode != 201) {
-      print(response.statusMessage);
-      print(response.extra);
-      print(response.headers);
-      print(response.data);
-      throw Exception();
-    }
-  }
 
 
 

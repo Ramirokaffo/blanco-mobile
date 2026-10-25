@@ -3,6 +3,7 @@
 import 'package:dio/dio.dart';
 
 import '../../LocalBdManager/LocalBdManager.dart';
+import '../HttpRequest/ApiHelper.dart';
 import '../HttpRequest/RouteFile.dart';
 import '../HttpRequest/dioConstructor.dart';
 import 'SaleProduct.dart';
@@ -39,11 +40,11 @@ class Sale {
 
   Sale.fromMap(Map<String, dynamic> basket) {
     id = basket["id"];
-    isPaid = basket["is_paid"] == 1;
-    isCredit = basket["is_credit"] == 1;
+    isPaid = toBool(basket["is_paid"]);
+    isCredit = toBool(basket["is_credit"]);
     createAt = basket["create_at"];
     deleteAt = basket["delete_at"];
-    total = double.tryParse(basket["total"]);
+    total = toDouble(basket["total"]);
     // deliveredDate = basket["deliveredDate"];
     // paymentMethod = PaymentMethod.fromMap((basket["paymentMethod"] as Map<String, dynamic>));
   }
@@ -51,7 +52,8 @@ class Sale {
 
   Map<String, dynamic> toSendMapDto() {
     return {
-      "sale_products": saleProducts?.map((SaleProduct basketArticle) => basketArticle.toSendMapDto()).toList(),
+      "items": saleProducts?.map((SaleProduct basketArticle) => basketArticle.toSendMapDto()).toList(),
+      "payment_method": "CASH",
     };
   }
 
@@ -60,30 +62,25 @@ class Sale {
   }
 
 
+  /// Envoie la vente. La vente est rattachée par le serveur à la journée
+  /// (Daily) en cours ; l'option "ajouter à la vente courante" n'existe plus.
   Future createBasket({void Function(double progess)? progressCallBack, String? serverUri}) async {
     CancelToken cancelToken = CancelToken();
     var dio = dioConstructor(serverUri?? await LocalBdManager.localBdSelectSetting("serverUri"));
-    // print(toSendMapDto());
     var response = await dio.post(
-      "/sale?current_sale=${addToCurrentSale!? 1: 0}",
+      createSaleRoute,
       data: toSendMapDto(),
       cancelToken: cancelToken,
       onSendProgress: (count, total) {
-        if (progressCallBack != null) {
+        if (progressCallBack != null && total > 0) {
           progressCallBack(count / total);
         }
-        // print("Count: $count");
-        // print("Total: $total");
       },
     );
-    if (response.statusCode != 200) {
-      // print(response.statusMessage);
-      // print(response.extra);
-      // print(response.headers);
-      // print(response.data);
-      throw Exception();
+    if (![200, 201].contains(response.statusCode) || response.data["status"] != 1) {
+      throw ApiException(extractErrorMessage(response.data), statusCode: response.statusCode);
     }
-
+    return response.data;
   }
 
 

@@ -1,11 +1,10 @@
 
 
-import 'package:dio/dio.dart';
+import '../HttpRequest/ApiHelper.dart';
 
-import '../../LocalBdManager/LocalBdManager.dart';
-import '../HttpRequest/dioConstructor.dart';
-import 'MyUser.dart';
-
+/// Ancien "bon approvisionnement" du serveur Flask. L'API Django porte le prix
+/// de vente et le dernier prix d'achat sur le produit ; cette classe sert
+/// seulement à les présenter à l'interface existante.
 class Supply {
   late int? id;
   late int? productCount;
@@ -28,10 +27,10 @@ class Supply {
   Supply.fromMap(Map<String, dynamic>? supply) {
     if (supply != null) {
       id = supply["id"];
-      productCount = supply["product_count"];
-      productCountRest = supply["product_count_rest"];
-      unitPrice = supply["unit_price"];
-      unitCoast = supply["unit_coast"];
+      productCount = toInt(supply["product_count"]);
+      productCountRest = toInt(supply["product_count_rest"]);
+      unitPrice = toDouble(supply["unit_price"]);
+      unitCoast = toDouble(supply["unit_coast"]);
     } else {
       id = null;
       productCount = 0;
@@ -40,35 +39,4 @@ class Supply {
       unitCoast = 0;
     }
   }
-
-  Map<String, dynamic> toSendMapDto() {
-    return {
-      "id": id,
-      "product_count": productCount,
-      "unit_price": unitPrice,
-      "unit_coast": unitCoast,
-    };
-  }
-
-
-  Future update({String? serverUri, void Function(double progess)? progressCallBack, CancelToken? cancelToken}) async {
-    var dio = dioConstructor(serverUri?? await LocalBdManager.localBdSelectSetting("serverUri"), extraHeader: {"userId": MyUser.currentUser.id});
-    var response = await dio.post(
-      '/update_supply',
-      data: toSendMapDto(),
-      cancelToken: cancelToken,
-      onSendProgress: (count, total) {
-        if (progressCallBack != null) {
-          progressCallBack(count / total);
-        }
-      },
-    );
-    if ([201, 200].contains(response.statusCode)) {
-      return response.data;
-    } else {
-      throw Exception();
-    }
-  }
-
-
 }

@@ -70,7 +70,7 @@ void onServerUriReady(String serverUri) async {
                           Navigator.push(context, MaterialPageRoute(builder: (context) => const HomePage(),));
                           // showUniversalSnackBar(context: context, message: "Une erreur s'est produite");
                         } else {
-                          showUniversalSnackBar(context: context, message: "Login ou mot de passe incorrect");
+                          showUniversalSnackBar(context: context, message: result["message"]?? "Login ou mot de passe incorrect");
                         }
                       }).onError((error, stackTrace) {
                         print(error);
@@ -100,6 +100,10 @@ void onServerUriReady(String serverUri) async {
 
 void onRescan() async {
   await BarCodeService.scanBarCode(context: context).then((serverUri) async  {
+    if (serverUri == "-1") {
+      setState(() {connexionError = true;});
+      return;
+    }
     LocalBdManager.localBdChangeSetting("serverUri", serverUri);
     serverBaseUrl = serverUri;
     onServerUriReady(serverUri);

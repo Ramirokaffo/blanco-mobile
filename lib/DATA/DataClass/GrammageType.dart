@@ -2,6 +2,7 @@
 import 'package:image_to_text/DATA/DataClass/Product.dart';
 
 import '../../LocalBdManager/LocalBdManager.dart';
+import '../HttpRequest/ApiHelper.dart';
 import '../HttpRequest/RouteFile.dart';
 import '../HttpRequest/dioConstructor.dart';
 
@@ -27,33 +28,19 @@ class GrammageType {
     } else {
       try {
         var dio = dioConstructor(await LocalBdManager.localBdSelectSetting("serverUri"));
-        var response = await dio.get("/get_grammage_type");
+        var response = await dio.get(grammageTypesRoute);
         if (response.statusCode == 200) {
           allGrammageTypeList.addAll((response.data as List<dynamic>).map((grammageType) => GrammageType.fromMap(grammageType)));
           return allGrammageTypeList;
         }
+        throw ApiException(extractErrorMessage(response.data), statusCode: response.statusCode);
       } catch (e) {
         print(e);
-        throw Exception(e);
+        rethrow;
       }
     }
-    return [];
   }
 
-  void createCategory(String serverUri, String name, String description) async {
-    var dio = dioConstructor(serverUri);
-    var response = await dio.post(
-      createPaymentMethodRoute,
-      data: {"name": name, "description": description},
-    );
-    if (response.statusCode != 201) {
-      print(response.statusMessage);
-      print(response.extra);
-      print(response.headers);
-      print(response.data);
-      throw Exception();
-    }
-  }
 
 
 

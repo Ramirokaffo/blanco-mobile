@@ -20,6 +20,7 @@ class _TestConnectionWidgetState extends State<TestConnectionWidget> {
     String? code;
     if (byScan) {
      code = await BarCodeService.scanBarCode(context: context);
+     if (code == "-1") return;
     }
     if (mounted) {
       setState(() {

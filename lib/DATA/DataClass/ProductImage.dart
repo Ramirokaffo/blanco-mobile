@@ -1,13 +1,10 @@
 
-
-
 import 'package:dio/dio.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_to_text/DATA/DataClass/Product.dart';
 
-import '../../LocalBdManager/LocalBdManager.dart';
-import '../HttpRequest/dioConstructor.dart';
-import 'MyUser.dart';
+import '../HttpRequest/ApiHelper.dart';
+import '../HttpRequest/RouteFile.dart';
 
 class ProductImage {
   late int? id;
@@ -29,34 +26,26 @@ class ProductImage {
 
   ProductImage.fromMap(Map<String, dynamic> articleImage) {
      id = articleImage["id"];
-     path = articleImage["path"];
-     url = articleImage["url"];
-     isPrincipal = articleImage["is_principal"] == 1;
-     product = articleImage["product"];
+     path = articleImage["image"];
+     url = _publicImageUrl(articleImage["url"]?? articleImage["image"]);
+     isPrincipal = toBool(articleImage["is_primary"]);
+     product = null;
      imageFile = null;
-
   }
 
+  /// Les fichiers /media/ ne sont servis par Django qu'en DEBUG : on passe par
+  /// la route publique /api/images/product/<fichier>/ sur le même serveur.
+  static String? _publicImageUrl(String? mediaUrl) {
+    if (mediaUrl == null || mediaUrl.isEmpty) return null;
+    Uri uri = Uri.parse(mediaUrl);
+    if (!uri.hasAuthority || uri.pathSegments.isEmpty) return mediaUrl;
+    return "${uri.origin}${imageRoute("product", uri.pathSegments.last)}";
+  }
+
+  /// L'API Django ne propose pas de suppression d'image : elle se fait depuis
+  /// le back-office web.
   static Future deleteImageById(int imageId, {CancelToken? cancelToken, String? serverUri}) async {
-    var dio = dioConstructor(serverUri?? await LocalBdManager.localBdSelectSetting("serverUri"), extraHeader: {"userId": MyUser.currentUser.id});
-    var response = await dio.delete("/delete_image/$imageId", cancelToken: cancelToken);
-    if (response.statusCode == 200) {
-      print(response.data);
-      print(response.statusMessage);
-      return response.data;
-    }
-    return null;
+    throw ApiException("La suppression d'image se fait depuis le back-office web");
   }
-
-
-  Map<String, dynamic> toSendMapDto() {
-    return {
-      "path": path,
-      "description": description,
-      // "isPrincipal": isPrincipal!? 1: 0,
-    };
-  }
-
-
 
 }

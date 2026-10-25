@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_to_text/DATA/DataClass/Product.dart';
 import 'package:image_to_text/DATA/DataClass/Sale.dart';
 import 'package:image_to_text/UI/MiniWidget/UniversalSnackBar.dart';
+import 'package:image_to_text/DATA/HttpRequest/ApiHelper.dart';
 
 import '../../DATA/DataClass/SaleProduct.dart';
 import '../../MiniFunction/GlobalTestConnectivity.dart';
@@ -50,7 +51,7 @@ class _SaleProductPageState extends State<SaleProductPage> {
 
   void _onAddProductTap() async {
     await BarCodeService.scanBarCode(context: context).then((code)  {
-      if (code.isNotEmpty) {
+      if (code.isNotEmpty && code != "-1") {
         Product.getProductByCode(code).then((Product? product) {
           if (product != null ) {
             setState(() {
@@ -184,12 +185,16 @@ Product.getProductByCode(product.code!).then((Product? myProduct){
           color: Colors.white,
           child: InkWell(
             onTap: (){
+              if (_sale.saleProducts!.isEmpty) {
+                showUniversalSnackBar(context: context, message: "Ajoutez au moins un produit");
+                return;
+              }
               _sale.createBasket().then((value) {
                 _sale.saleProducts!.clear();
                 setState(() {});
-                showUniversalSnackBar(context: context, message: "Envoyé avec succès !");
+                showUniversalSnackBar(context: context, message: value["message"]?? "Envoyé avec succès !", backgroundColor: Colors.green);
               }).onError((error, stackTrace) {
-                showUniversalSnackBar(context: context, message: "Une erreur s'est produite");
+                showUniversalSnackBar(context: context, message: errorMessageOf(error), backgroundColor: Colors.red);
               });
             },
             child: Container(
@@ -238,18 +243,6 @@ Product.getProductByCode(product.code!).then((Product? myProduct){
                 child: Column(
                   children: [
                     _addSaleProductWidget(),
-                    const Divider(),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text("Ajouter à la vente courante"),
-                        Switch(value: _sale.addToCurrentSale!, onChanged: (value) {
-                          setState(() {
-                            _sale.addToCurrentSale = !_sale.addToCurrentSale!;
-                          });
-                        },),
-                      ],
-                    )
                   ],
                 ),
               ),

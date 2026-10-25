@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_to_text/DATA/DataClass/Product.dart';
 import 'package:image_to_text/AppService/TextRecognitionService.dart';
-import 'package:image_to_text/DATA/DataClass/Supply.dart';
+import 'package:image_to_text/DATA/HttpRequest/ApiHelper.dart';
 import 'package:image_to_text/UI/MiniWidget/UniversalSnackBar.dart';
 
 import '../../AppService/BarCodeService.dart';
@@ -26,6 +26,7 @@ class _ProductWithAnyUnitCoastPageState extends State<ProductWithAnyUnitCoastPag
   int _currentPage = 0;
   bool _notMatchedData = false;
   bool _anErrorOccur = false;
+  String? _errorMessage;
 
   // void getProductList() async {
   //   _anErrorOccur = false;
@@ -89,14 +90,13 @@ class _ProductWithAnyUnitCoastPageState extends State<ProductWithAnyUnitCoastPag
 
   _onSaveNewUnitCoastTap(Product product, double unitCoast) {
 
-    Supply supply = Supply(id: product.supplyId, unitCoast: unitCoast);
-    supply.update().then((value) {
+    Product(id: product.id, unitCoast: unitCoast).updateProduct().then((value) {
       _productList.remove(product);
       Navigator.of(context).pop();
       showUniversalSnackBar(context: context, message: "Information enregistrée avec succès !", backgroundColor: Colors.green);
       setState(() {});
     }).onError((error, stackTrace) {
-      showUniversalSnackBar(context: context, message: "Une erreur s'est produites, veuillez reéssayer !", backgroundColor: Colors.red);
+      showUniversalSnackBar(context: context, message: errorMessageOf(error, fallback: "Une erreur s'est produites, veuillez reéssayer !"), backgroundColor: Colors.red);
     });
   }
 
@@ -118,9 +118,10 @@ class _ProductWithAnyUnitCoastPageState extends State<ProductWithAnyUnitCoastPag
       _isViewFinish = false;
       _notMatchedData = false;
       _anErrorOccur = true;
+      _errorMessage = error is ApiException? error.message: null;
       _isLoading = false;
       setState(() {});
-      showUniversalSnackBar(context: context, message: "Une erreur s'est produite !", backgroundColor: Colors.red);
+      showUniversalSnackBar(context: context, message: errorMessageOf(error, fallback: "Une erreur s'est produite !"), backgroundColor: Colors.red);
     });
   }
 
@@ -141,9 +142,9 @@ class _ProductWithAnyUnitCoastPageState extends State<ProductWithAnyUnitCoastPag
             Text("Oups !", style: TextStyle(fontSize: 25, color: Theme.of(context).colorScheme.primary,
                 fontWeight: FontWeight.bold)),
             const SizedBox(height: 20,),
-            const Text("Impossible de charger la page, rassurez-vous que le "
+            Text(_errorMessage?? "Impossible de charger la page, rassurez-vous que le "
                 "serveur est en marche et que vous êtes connecté sur le même réseau local !",
-              style: TextStyle(fontSize: 15),),
+              style: const TextStyle(fontSize: 15),),
             const SizedBox(height: 20,),
             TextButton(
                 style: ButtonStyle(

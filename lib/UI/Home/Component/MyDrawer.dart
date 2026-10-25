@@ -24,7 +24,9 @@ class _MyDrawerMenuState extends State<MyDrawerMenu> {
   }
 
   void onLogOutTap() {
-    showSimpleDialog(title: "Attention !", isimgvisible: true, actionText: "Oui", context: context, message: "Vous êtes sûr de vouloir vous déconnecter de l'application ?", onActionTap: (){
+    showSimpleDialog(title: "Attention !", isimgvisible: true, actionText: "Oui", context: context, message: "Vous êtes sûr de vouloir vous déconnecter de l'application ?", onActionTap: () async {
+      await MyUser.logOut();
+      if (!mounted) return;
       Navigator.popUntil(context, (route) => false);
       Navigator.of(context).push(MaterialPageRoute(builder: (context) => const WelcomePage(),));
     });

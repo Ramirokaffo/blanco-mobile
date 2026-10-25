@@ -54,38 +54,33 @@ TextEditingController controller = TextEditingController();
                 borderRadius: BorderRadius.circular(10)
             ),
             child: InkWell(
-              onTap: (){
-                MyUser.findUserByLogin(controller.text).then((value) async {
-                  if (value != null ) {
-                    if (value["status"] == 1) {
-                      await Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) =>
-                            AuthentificationPage(title: "Votre mot de passe",
-                              login: controller.text,
-                              onCompleted: (password) async {
-                                var status = 0;
-                                await MyUser.logUserIn(password).then((result) {
-                                  if (result["status"] == 1) {
-                                    status = 1;
-                                    Navigator.popUntil(context, (route) => false);
-                                    Navigator.push(context, MaterialPageRoute(builder: (context) => const HomePage(),));
-                                  } else {
-                                    showUniversalSnackBar(context: context, message: "Login ou mot de passe incorrect");
-                                  }
-                                }).onError((error, stackTrace) {
-                                  showUniversalSnackBar(context: context, message: "Une erreur s'est produite");
-                                });
-                                if (status == 1) {
-                                  return true;
-                                } else {
-                                  return false;
-                                }
-                              },)));
-                    } else {
-                      showUniversalSnackBar(context: context, message: "Nous ne parvenons pas à trouver votre compte");
-                    }
-                  }
-                });
+              onTap: () async {
+                if (controller.text.trim().isEmpty) {
+                  showUniversalSnackBar(context: context, message: "Veuillez entrer votre login");
+                  return;
+                }
+                // Le login est vérifié par le serveur au moment de la connexion
+                await MyUser.setLocalLogin(controller.text);
+                if (!context.mounted) return;
+                await Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) =>
+                      AuthentificationPage(title: "Votre mot de passe",
+                        login: controller.text.trim(),
+                        onCompleted: (password) async {
+                          var status = 0;
+                          await MyUser.logUserIn(password).then((result) {
+                            if (result["status"] == 1) {
+                              status = 1;
+                              Navigator.popUntil(context, (route) => false);
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => const HomePage(),));
+                            } else {
+                              showUniversalSnackBar(context: context, message: result["message"]?? "Login ou mot de passe incorrect");
+                            }
+                          }).onError((error, stackTrace) {
+                            showUniversalSnackBar(context: context, message: "Une erreur s'est produite");
+                          });
+                          return status == 1;
+                        },)));
               },
               child: const Text("Retrouver mon compte",
                 style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),

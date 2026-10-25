@@ -5,6 +5,8 @@ import 'package:image_to_text/DATA/DataClass/MyUser.dart';
 import 'package:image_to_text/DATA/DataClass/Product.dart';
 
 import '../../LocalBdManager/LocalBdManager.dart';
+import '../HttpRequest/ApiHelper.dart';
+import '../HttpRequest/RouteFile.dart';
 import '../HttpRequest/dioConstructor.dart';
 
 class Inventory {
@@ -48,35 +50,34 @@ class Inventory {
 
   Inventory.fromMap(Map<String, dynamic> inventory) {
     id = inventory["id"];
-    product = inventory["product"];
-    staff = inventory["staff"];
+    product = Product(id: inventory["product"], name: inventory["product_name"], code: inventory["product_code"]);
+    staff = null;
     validProductCount = inventory["valid_product_count"];
     invalidProductCount = inventory["invalid_product_count"];
   }
 
   Map<String, dynamic> toSendMapDto() {
     return {
-      "valid_product_count": validProductCount,
-      "invalid_product_count": invalidProductCount,
-      "staff_id": staff!.id!,
       "product_id": product!.id!,
+      "valid_product_count": validProductCount,
+      "invalid_product_count": invalidProductCount?? 0,
     };
   }
 
   Future<Inventory?> save({String? route, String? serverUri}) async {
     try {
       CancelToken cancelToken = CancelToken();
-      var dio = dioConstructor(serverUri?? await LocalBdManager.localBdSelectSetting("serverUri"), needAuthorisation: false);
-      var response = await dio.post(route?? "/create_inventory", data: toSendMapDto(), cancelToken: cancelToken);
-      if ([201, 200].contains(response.statusCode)) {
+      var dio = dioConstructor(serverUri?? await LocalBdManager.localBdSelectSetting("serverUri"));
+      var response = await dio.post(route?? createInventoryRoute, data: toSendMapDto(), cancelToken: cancelToken);
+      if ([201, 200].contains(response.statusCode) && response.data["status"] == 1) {
         Inventory inventory = Inventory.fromMap(response.data["inventory"]);
         return inventory;
       } else {
-        throw Exception(response.statusMessage);
+        throw ApiException(extractErrorMessage(response.data), statusCode: response.statusCode);
       }
     } catch (e) {
       print(e);
-      throw Exception(e);
+      rethrow;
     }
   }
 

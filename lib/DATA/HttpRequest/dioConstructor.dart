@@ -7,25 +7,35 @@ import 'package:dio/dio.dart';
 import '../DataClass/MyUser.dart';
 import 'RouteFile.dart';
 
-Dio dioConstructor(baseUrl, {Map<String, dynamic>? extraHeader, bool needAuthorisation = true, }) {
+/// URL de base du serveur : le QR code contient "ip:port" ; une URL complète
+/// (http(s)://...) est aussi acceptée.
+String serverBaseUrl(String serverUri) {
+  String uri = serverUri.trim();
+  if (uri.endsWith("/")) uri = uri.substring(0, uri.length - 1);
+  if (uri.startsWith("http://") || uri.startsWith("https://")) return uri;
+  return "$appProtocol://$uri";
+}
+
+Dio dioConstructor(baseUrl, {Map<String, dynamic>? extraHeader, bool needAuthorisation = true,
+  Duration receiveTimeout = const Duration(seconds: 15)}) {
   Dio dio = Dio();
   Map<String, dynamic> headers = {
     HttpHeaders.userAgentHeader: 'dio',
-    'common-header': 'xx',
+    HttpHeaders.acceptHeader: 'application/json',
+    HttpHeaders.acceptLanguageHeader: 'fr',
   };
-  if (needAuthorisation) {
-    headers["authorization"] = "Bearer $testToken";
+  if (needAuthorisation && MyUser.token != null) {
+    headers[HttpHeaders.authorizationHeader] = "Token ${MyUser.token}";
   }
-  headers["userId"] = MyUser.currentUser.id;
   if (extraHeader != null) {
     extraHeader.forEach((key, value) {
       headers[key] = value;
     });
   }
   dio.options
-    ..baseUrl = "$appProtocol://$baseUrl"
+    ..baseUrl = serverBaseUrl(baseUrl.toString())
     ..connectTimeout = const Duration(seconds: 5) //5s
-    ..receiveTimeout = const Duration(seconds: 5)
+    ..receiveTimeout = receiveTimeout
     ..validateStatus = (int? status) {
       return status != null && status > 0;
     }
